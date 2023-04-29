@@ -1,16 +1,21 @@
 %{
+    #include <stdlib.h>
     #include <stdio.h>
-    void yyerror(char *);
-    int yylex(void);
+    void yyerror (char* ); int yywrap();
+    int yylex();
+    extern FILE *yyin;
+    extern FILE *yyout;
 %}
 
-%token INT_DECLARATION FLOAT_DECLARATION CHAR_DECLARATION CONST_DECLARATION ENUM_DECLARATION
+%token INT_DECLARATION FLOAT_DECLARATION CHAR_DECLARATION CONST_DECLARATION BOOL_DECLARATION ENUM_DECLARATION
 %token AND OR NOT EQ NE LT GT LE GE
 %token IF ELSE WHILE FOR REPEAT UNTIL SWITCH CASE DEFAULT BREAK CONTINUE
-%token RETURN VOID
+%token RETURN VOID PRINT
 %token IDENTIFIER INTEGER_CONSTANT FLOAT_CONSTANT CHAR_CONSTANT
+%nonassoc IFX
+%nonassoc ELSE
+%nonassoc UMINUS
 
-%left  ','
 %right '='
 %left  OR
 %left  AND
@@ -21,150 +26,141 @@
 %right NOT
 
 %%
-    /* program is a list of zero or more definitions */
-program:                program definition
-|                        
-;
-    /* definition is a function or variable definition */
-definition:             variable_definition
-|                       function_definition
+
+program:                                statement_list                        {printf("program\n");}
 ;
 
-    /* function definition is a type followed by a list of zero or more variables */
-function_definition:    VOID IDENTIFIER '(' parameter_list_opt ')' '{' statement '}'
-|                       variable_type IDENTIFIER '(' parameter_list_opt ')' '{' statement '}'
-;
-
-    /* to allow for zero or more parameters which are separated by commas */
-parameter_list:         parameter_list ',' parameter
-|                       parameter
-;
-parameter_list_opt:     parameter_list
-|                        
-;
-
-parameter:              variable_type IDENTIFIER
-;
-
-variable_type:          INT_DECLARATION
-|                       FLOAT_DECLARATION
-|                       CHAR_DECLARATION
-;
-
-// function_type:          VOID
-// |                       variable_type
+// declaration_list:                       declaration_list declaration            {printf("declaration_list\n");}
+// |                                       declaration                             {printf("declaration_list\n");}
 // ;
 
-variable_declaration:   variable_type IDENTIFIER
-
-variable_initialization:    '=' expression ';'
-|                           '=' '{' expression_list '}' ';'
-|                           ';'
-|
+declaration:                            variable_declaration ';'           {printf("variable declaration\n");}
+|                                       function_declaration           {printf("function declaration\n");}
 ;
 
-variable_definition:    variable_declaration variable_initialization
-|                       CONST_DECLARATION variable_declaration variable_initialization
-|                       enum_definition
+variable_type:                          INT_DECLARATION                    
+|                                       FLOAT_DECLARATION
+|                                       CHAR_DECLARATION
+|                                       CONST_DECLARATION
+|                                       BOOL_DECLARATION
 ;
 
-// variable_definition:    variable_type IDENTIFIER ';'
-// |                       CONST_DECLARATION variable_type IDENTIFIER '=' expression ';'
-// |                       variable_type IDENTIFIER '=' expression ';'
-// |                       INT_DECLARATION IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}' ';'
-// |                       FLOAT_DECLARATION IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}' ';'
-//     /* may change this to take a string expression where the expression is not delimited by a comma */
-// |                       CHAR_DECLARATION IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}' ';'
-// |                       enum_definition
+/* a function can have the additional type void as well as the other types */
+/* problem here */
+/* proposed solution 1: add void to the function definition and remove this rule*/
+// function_type:                          variable_type
+// |                                       VOID
 // ;
 
-expression_list:        expression_list ',' expression
-|                       expression
+variable_declaration:                   variable_type IDENTIFIER 
+|                                       variable_type IDENTIFIER '=' expression 
+/* may remove arrays */
+|                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' 
+|                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}'
+|                                       enum_definition
 ;
 
-expression:             expression '+' expression
-|                       expression '-' expression
-|                       expression '*' expression
-|                       expression '/' expression
-|                       expression '%' expression
-|                       expression EQ expression
-|                       expression NE expression
-|                       expression LT expression
-|                       expression GT expression
-|                       expression LE expression
-|                       expression GE expression
-|                       expression AND expression
-|                       expression OR expression
-|                       '(' expression ')'
-|                       '-' expression  %prec NOT
-|                       NOT expression
-|                       INTEGER_CONSTANT
-|                       FLOAT_CONSTANT
-|                       CHAR_CONSTANT
-|                       IDENTIFIER
+enum_definition:                        ENUM_DECLARATION IDENTIFIER'{' enum_list '}'
 ;
 
-
-statement:              '{' statement '}'
-|                       variable_definition
-|                       expression ';'
-|                       RETURN expression ';'
-|                       RETURN ';'
-|                       if_statement else_statement
-|                       WHILE '(' expression ')' statement
-|                       FOR '(' expression ';' expression ';' expression ')' statement
-|                       REPEAT statement UNTIL '(' expression ')' ';'
-|                       SWITCH '(' expression ')' '{' case_list '}'
-|                       ';'
-|                       BREAK ';'
-|                       CONTINUE ';'
+enum_list:                              IDENTIFIER enum_opt_value ',' enum_list 
+|                                       IDENTIFIER enum_opt_value
 ;
 
-compound_statement:     '{' statement '}'
-
-if_statement:           IF '(' expression ')' compound_statement
+enum_opt_value:                         '=' INTEGER_CONSTANT
+|                                       /* empty */
 ;
 
-else_statement:         ELSE compound_statement
-|   
+expression_list:                        expression_list ',' expression
+|                                       expression
 ;
 
-case_list:              case_list case
-|                       case
+expression:                             IDENTIFIER
+|                                       INTEGER_CONSTANT
+|                                       FLOAT_CONSTANT
+|                                       CHAR_CONSTANT
+|                                       '(' expression ')'
+|                                       expression '+' expression
+|                                       expression '-' expression
+|                                       expression '*' expression
+|                                       expression '/' expression
+|                                       expression '%' expression
+|                                       expression EQ expression
+|                                       expression NE expression
+|                                       expression LT expression
+|                                       expression GT expression
+|                                       expression LE expression
+|                                       expression GE expression
+|                                       expression AND expression
+|                                       expression OR expression
+|                                       NOT expression
+|                                       '-' expression %prec UMINUS
+    /* may not use arrays */
+// |                                       IDENTIFIER '[' expression ']'
+
+function_declaration:                   variable_type IDENTIFIER '(' parameter_list ')' block
+|                                       VOID IDENTIFIER '(' parameter_list ')' block
 ;
 
-// case:                   CASE INTEGER_CONSTANT ':' statement
-// |                       CASE FLOAT_CONSTANT ':' statement
-// |                       CASE CHAR_CONSTANT ':' statement
-//     /* may need to add boolean cases */
-// |                       CASE expression ':' statement /*?*/
-// |                       DEFAULT ':' statement
-case:                   CASE expression ':' statement /*?*/
-|                       DEFAULT ':' statement
+function_call:                          IDENTIFIER '(' arguemnt_list ')' ';'    {printf("function call\n");}
+|                                       reserved_functions '(' arguemnt_list ')' ';'  {printf("print call\n");}
 ;
 
-enum_definition:        ENUM_DECLARATION IDENTIFIER '{' enum_list '}'
+/*reserved functions rule */
+reserved_functions:                     PRINT
+/* | cout or whatnot*/
+; 
+
+arguemnt_list:                          arguemnt_list ',' expression        
+|                                       expression
+|                                    /* empty */
 ;
 
-enum_list:              enum_list ',' IDENTIFIER
-|                       enum_list ',' IDENTIFIER '=' INTEGER_CONSTANT
-|                       IDENTIFIER '=' INTEGER_CONSTANT
-|                       IDENTIFIER
+parameter_list:                         parameter_list ',' parameter
+|                                       parameter
+|                                       /* empty */
 ;
 
-    /* variables and constants declaration */
+parameter:                              variable_declaration
+;
 
-    /* mathematical and logical expressions */
+block:                                  '{' statement_list '}'
+;
 
-    /* control statements */
+statement_list:                         statement statement_list
+|                                      /* empty */
+;
 
-    /* functions */
+statement:                              expression ';'
+|                                       declaration
+|                                       function_call
+|                                       for_loop
+|                                       assignment
+/*|                                       if while for ... */
+;
+
+for_loop:                               FOR '(' statement statement statement ')' block     {printf("for loop\n");}
+|                                       FOR '(' statement statement ')' block               {printf("for loop\n");}
+|                                       FOR '(' statement ')' block                         {printf("for loop\n");}
+;
+
+assignment:                             IDENTIFIER '=' expression ';'
+;
+
 %%
 
 void yyerror(char *s) {
-    fprintf(stderr, "%s\n", s);
+    fprintf(stdout, "%s\n", s);
 }
 
-int main(void) {
+int main(int argc, char *argv[])
+{
+    yyin = fopen(argv[1], "r");
     yyparse();
+    if (yywrap())
+    {
+        printf("Parsing successful ya regala!\n");
+    }
+    fclose(yyin); 
+    return 0;
 }

@@ -8,50 +8,52 @@
 %%
 
     /* variables and constants declaration */
-"int"                       { return INT_DECLARATION; }
-"float"                     { return FLOAT_DECLARATION; }
-"char"                      { return CHAR_DECLARATION; }
-"const"                     { return CONST_DECLARATION; }
-"enum"                      { return ENUM_DECLARATION; }
+"int"                           { printf("%s",yytext); return INT_DECLARATION; }
+"float"                         { printf("%s",yytext); return FLOAT_DECLARATION; }
+"char"                          { printf("%s",yytext); return CHAR_DECLARATION; }
+"bool"                          { printf("%s",yytext); return BOOL_DECLARATION; }
+"const"                         { printf("%s",yytext); return CONST_DECLARATION; }
+"enum"                          { printf("%s",yytext); return ENUM_DECLARATION; }
 
     /* mathematical and logical expressions */
-[-+*/%(){};:=,]             { return *yytext; }
-"&&"                        { return AND; }
-"||"                        { return OR; }
-"!"                         { return NOT; }
-"=="                        { return EQ; }
-"!="                        { return NE; }
-"<"                         { return LT; }
-">"                         { return GT; }
-"<="                        { return LE; }
-">="                        { return GE; }
+[-+*/%(){};:=,\[\]]             { printf("%s",yytext); return *yytext; }
+"&&"                            { printf("%s",yytext); return AND; }
+"||"                            { printf("%s",yytext); return OR; }
+"!"                             { printf("%s",yytext); return NOT; }
+"=="                            { printf("%s",yytext); return EQ; }
+"!="                            { printf("%s",yytext); return NE; }
+"<"                             { printf("%s",yytext); return LT; }
+">"                             { printf("%s",yytext); return GT; }
+"<="                            { printf("%s",yytext); return LE; }
+">="                            { printf("%s",yytext); return GE; }
 
     /* control statements */
-"if"                        { return IF; }
-"else"                      { return ELSE; }
-"while"                     { return WHILE; }
-"for"                       { return FOR; }
-"repeat"                    { return REPEAT; }
-"until"                     { return UNTIL; }
-"switch"                    { return SWITCH; }
-"case"                      { return CASE; }
-"default"                   { return DEFAULT; }
-"break"                     { return BREAK; }
-"continue"                  { return CONTINUE; }
+"if"                            { printf("%s",yytext); return IF; }
+"else"                          { printf("%s",yytext); return ELSE; }
+"while"                         { printf("%s",yytext); return WHILE; }
+"for"                           { printf("%s",yytext); return FOR; }
+"repeat"                        { printf("%s",yytext); return REPEAT; }
+"until"                         { printf("%s",yytext); return UNTIL; }
+"switch"                        { printf("%s",yytext); return SWITCH; }
+"case"                          { printf("%s",yytext); return CASE; }
+"default"                       { printf("%s",yytext); return DEFAULT; }
+"break"                         { printf("%s",yytext); return BREAK; }
+"continue"                      { printf("%s",yytext); return CONTINUE; }
 
     /* functions */
-"return"                    { return RETURN; }
-"void"                      { return VOID; }
+"return"                        { printf("%s",yytext); return RETURN; }
+"void"                          { printf("%s",yytext); return VOID; }
+"print"                         { printf("%s",yytext); return PRINT; }
 
-[a-zA-Z_][a-zA-Z0-9_]*      { return IDENTIFIER; }
-[0-9]+                      { return INTEGER_CONSTANT; }
-[0-9]+"."[0-9]+             { return FLOAT_CONSTANT; }
-"'"[a-zA-Z0-9]"'"           { return CHAR_CONSTANT; }
+[a-zA-Z_][a-zA-Z0-9_]*          { printf("%s",yytext); return IDENTIFIER; }
+[0-9]+                          { printf("%s",yytext); return INTEGER_CONSTANT; }
+[0-9]+"."[0-9]+                 { printf("%s",yytext); return FLOAT_CONSTANT; }
+"'"[a-zA-Z0-9]"'"               { printf("%s",yytext); return CHAR_CONSTANT; }
 
-\/\/.*\n                    {} /* ignore comments */
-[ \t\n]                     {} /* ignore whitespace */
+\/\/.*\n                        {} /* ignore comments */
+[ \t\n]+                        { printf("%s",yytext); } /* ignore whitespace */
 
-.                           { yyerror("Unknown character"); }
+.                               { yyerror("Unknown character"); }
 
 %%
 
