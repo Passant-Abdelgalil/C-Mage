@@ -51,3 +51,96 @@ for (int i = 0; i < 10;) {
     y();
     y(10);
 }
+
+if ( x>10 ) {
+    x = 11;
+}
+
+if ( x>10 ) {
+    x = 11;
+    if ( x>10 ) {
+        x = 11;
+    }
+} else {
+    x = 10;
+    if ( x>10 ) {
+        for (int i = 0; i < 10;) {
+            int x = 10;
+            int y = 10;
+            int y (int x = 10, int y = 10) {
+                int z = x + y;
+            }
+            y();
+            y(10);
+        }
+        continue;
+    }
+}
+
+while ( x>10 ) {
+    x = 11;
+    while ( x>10 ) {
+        x = 11;
+    }
+    if ( x>10 ) {
+        x = 11;
+        break;
+    } else {
+        x = 10;
+    }
+    
+}
+
+do {
+    x = 11;
+    do {
+        x = 11;
+    } while ( x>10 );
+    if ( x>10 ) {
+        x = 11;
+    } else {
+        x = 10;
+    }
+} while ( x>10 );
+
+void x (int x = 10, int y = 10) {
+    int z = x + y;
+    return;
+}
+
+void x (int x = 10, int y = 10) {
+    int z = x + y;
+    return z;
+}
+
+x= test(10,11);
+
+switch (x) {
+    case 1:
+        x = 1;
+        break;
+    case 2:
+        x = 2;
+        break;
+    default:
+        x = 3;
+        break;
+}
+
+{
+    int x;
+    char x = 'a';
+    char x = a;
+    {
+        enum test {x=10,y};
+    }
+
+}
+
+string x = "test1";
+
+string x = test2;
+
+int x = test (10,11);
+
+int x = 10 + test (10,11);
