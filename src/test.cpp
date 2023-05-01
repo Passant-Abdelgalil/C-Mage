@@ -144,3 +144,63 @@ string x = test2;
 int x = test (10,11);
 
 int x = 10 + test (10,11);
+int x = test() + x;
+
+x = test (10,11) + x;
+
+if (x>10){
+    y = 10;
+} else if (x>11) {
+    y = 11;
+} else {
+    y = 12;
+} 
+
+if (true){
+    y = 10;
+    if (x||y){
+        y = 10;
+    } else {
+        y = 1;
+    }
+} else if (x>11) {
+    y = 11;
+    if (x||y){
+        y = 10;
+    } else if (x && y) {
+        y = 1;
+    } else {
+        break;
+    }
+} else {
+    y = 12;
+    continue;
+}
+
+const int x = 10;
+const char y = 'x';
+
+#this is a comment
+# this is a comment
+
+int x;
+
+void recursive(){
+    recursive();
+}
+
+{
+    int x = 10;
+    y = 10;
+    if (x||y){
+        y = 10;
+    } else {
+        y = 1;
+    }
+    {
+        int y = 10;
+        {
+            int z = 10;
+        }
+    }
+}

@@ -7,6 +7,8 @@
 
 %%
 
+#[\s\t]*.*                       {printf("%s",yytext);} /* ignore comments */
+
     /* variables and constants declaration */
 "int"                           { printf("%s",yytext); return INT_DECLARATION; }
 "float"                         { printf("%s",yytext); return FLOAT_DECLARATION; }
@@ -55,11 +57,9 @@
 \"[a-zA-Z0-9]+\"                { printf("%s",yytext); return STRING_CONSTANT; }
  
 
-\/\/.*\n                        {} /* ignore comments */
-[ \t\n]+                        { printf("%s",yytext); } /* ignore whitespace */
+[ \t]+                        { printf("%s",yytext); } /* ignore whitespace */
 
-
-.                               { yyerror("Unknown character"); }
+.                               { printf("%s",yytext);yyerror("Unknown character"); }
 
 %%
 

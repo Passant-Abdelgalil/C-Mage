@@ -13,6 +13,7 @@
 %token RETURN VOID PRINT
 %token IDENTIFIER INTEGER_CONSTANT FLOAT_CONSTANT CHAR_CONSTANT STRING_CONSTANT
 %token TRUE_KEYWORD FALSE_KEYWORD
+%token SINGLE_LINE_COMMENT 
 %nonassoc IFX
 %nonassoc ELSE
 %nonassoc UMINUS
@@ -27,7 +28,6 @@
 %right NOT
 
 %%
-
 program:                                statement_list                    {printf("program\n");}
 ;
 
@@ -42,7 +42,7 @@ declaration:                            variable_declaration ';'          {print
 variable_type:                          INT_DECLARATION                    
 |                                       FLOAT_DECLARATION
 |                                       CHAR_DECLARATION
-|                                       CONST_DECLARATION
+/*|                                       CONST_DECLARATION */
 |                                       BOOL_DECLARATION
 |                                       STRING_DECLARATION
 ;
@@ -56,11 +56,13 @@ variable_type:                          INT_DECLARATION
 
 variable_declaration:                   variable_type IDENTIFIER 
 |                                       variable_type IDENTIFIER '=' expression 
-|                                       variable_type IDENTIFIER '=' function_call      {printf("variable declared using function call\n");}
+/*|                                       variable_type IDENTIFIER '=' function_call      {printf("variable declared using function call\n");}*/
+/*|                                       variable_type IDENTIFIER '=' expression '+' function_call*/
 /* may remove arrays */
 |                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' 
 |                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}'
 |                                       enum_definition
+|                                       CONST_DECLARATION variable_type IDENTIFIER '=' expression
 ;
 
 enum_definition:                        ENUM_DECLARATION IDENTIFIER'{' enum_list '}'
@@ -83,6 +85,8 @@ expression:                             IDENTIFIER                            {p
 |                                       FLOAT_CONSTANT
 |                                       CHAR_CONSTANT                        {printf("char constant expression\n");}
 |                                       STRING_CONSTANT                      {printf("string constant expression\n");}
+|                                       TRUE_KEYWORD                         
+|                                       FALSE_KEYWORD
 |                                       '(' expression ')'
 |                                       expression '+' expression
 |                                       expression '-' expression
@@ -99,6 +103,7 @@ expression:                             IDENTIFIER                            {p
 |                                       expression OR expression
 |                                       NOT expression
 |                                       '-' expression %prec UMINUS
+|                                       function_call
 ;
     /* may not use arrays */
 // |                                       IDENTIFIER '[' expression ']'
@@ -107,8 +112,8 @@ function_declaration:                   variable_type IDENTIFIER '(' parameter_l
 |                                       VOID IDENTIFIER '(' parameter_list ')' block
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'               {printf("function call\n");}
-|                                       reserved_functions '(' arguemnt_list ')'      {printf("print call\n");}
+function_call:                          IDENTIFIER '(' arguemnt_list ')'                {printf("function call\n");}
+|                                       reserved_functions '(' arguemnt_list ')'        {printf("print call\n");}
 ;
 
 /*reserved functions rule */
@@ -138,7 +143,7 @@ statement_list:                         statement statement_list
 
 statement:                              expression ';'
 |                                       declaration
-|                                       function_call ';'
+/*|                                       function_call ';'*/
 |                                       for_loop
 |                                       assignment
 |                                       if_statement
@@ -150,11 +155,12 @@ statement:                              expression ';'
 |                                       BREAK ';'                                           {printf("break\n");}
 |                                       CONTINUE ';'                                        {printf("continue\n");}
 |                                       switch_statement
+|                                       comments
 /*|                                       if while for ... */
 ;
 
 assignment:                             IDENTIFIER '=' expression ';'                       {printf("assignment\n");}
-|                                       IDENTIFIER '=' function_call ';'                     {printf("function assignment\n");}
+/*|                                       IDENTIFIER '=' function_call ';'                     {printf("function assignment\n");}*/
 ;
 
 for_loop:                               FOR '(' statement statement statement ')' block     {printf("for loop\n");}
@@ -164,6 +170,7 @@ for_loop:                               FOR '(' statement statement statement ')
 
 if_statement:                           IF '(' expression ')' block %prec IFX               {printf("if statement\n");}
 |                                       IF '(' expression ')' block ELSE block              {printf("if statement with else\n");}
+|                                       IF '(' expression ')' block ELSE if_statement       {printf("if statement with else if\n");}
 ;
 
 while_loop:                             WHILE '(' expression ')' block                      {printf("while loop\n");}
@@ -183,7 +190,9 @@ case:                                   CASE expression ':' statement_list
 |                                       DEFAULT ':' statement_list
 ;
 
-
+comments:                               SINGLE_LINE_COMMENT                            {printf("single line comment\n");}
+/*|                                       MULTI_LINE_COMMENT                           {printf("multi line comment\n");}*/
+;
 
 %%
 
