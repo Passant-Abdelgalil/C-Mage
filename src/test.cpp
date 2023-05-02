@@ -108,9 +108,9 @@ void x (int x = 10, int y = 10) {
     return;
 }
 
-void x (int x = 10, int y = 10) {
-    int z = x + y;
-    return z;
+void x (int x = 10, int y) {
+    print(x + y);
+    return;
 }
 
 x= test(10,11);
@@ -204,3 +204,10 @@ void recursive(){
         }
     }
 }
+
+float x (int x = 10, int y) {
+    int z = x + y;
+    return z;
+}
+
+int _test1;
