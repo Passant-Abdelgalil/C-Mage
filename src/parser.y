@@ -163,9 +163,25 @@ assignment:                             IDENTIFIER '=' expression ';'           
 /*|                                       IDENTIFIER '=' function_call ';'                     {printf("function assignment\n");}*/
 ;
 
-for_loop:                               FOR '(' statement statement statement ')' block     {printf("for loop\n");}
+/*for_loop:                               FOR '(' statement statement statement ')' block     {printf("for loop\n");}
 |                                       FOR '(' statement statement ')' block               {printf("for loop\n");}
 |                                       FOR '(' statement ')' block                         {printf("for loop\n");}
+;*/
+
+for_loop:                               FOR '(' for_init ';' for_condition ';' for_update ')' block {printf("for loop\n");}
+;
+
+for_init:                               variable_declaration
+|                                       assignment
+|                                       /* empty */
+;
+
+for_condition:                          expression
+|                                       /* empty */
+;
+
+for_update:                             assignment
+|                                       /* empty */
 ;
 
 if_statement:                           IF '(' expression ')' block %prec IFX               {printf("if statement\n");}

@@ -42,7 +42,7 @@ for (int i = 0; i < 10; i = i + 1;) {
 }
 
 
-for (int i = 0; i < 10;) {
+for (;i<10; i = i + 1;) {
     int x = 10;
     int y = 10;
     int y (int x = 10, int y = 10) {
@@ -50,6 +50,16 @@ for (int i = 0; i < 10;) {
     }
     y();
     y(10);
+}
+
+for (;;i = i+1;){
+    int x = 10;
+    int y = 10;
+}
+
+for (int i =0;;){
+    int x = 10;
+    int y = 10;
 }
 
 if ( x>10 ) {
