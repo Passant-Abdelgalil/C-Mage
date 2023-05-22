@@ -1,0 +1,6 @@
+Line 1   : unknown token intz
+Line 9   : enum tool type redeclaration
+Line 23  : variable x redeclaration
+Line 25  : missing } 
+Line 55  : function int factorial(int) unmatching arguments: expected: int, got: string
+Line 56  : expected a statement
