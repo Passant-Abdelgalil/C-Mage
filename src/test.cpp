@@ -14,9 +14,6 @@ bool z = x >= y;
 float z = -x;
 bool y = !x;
 
-int x [10] = {1,2,3,4,5,6,7,8,9,10};
-int x [10];
-
 void x (int x = 10, int y = 10) {
    
    int z = x + y;
@@ -36,31 +33,31 @@ x();
 x(10);
 x(x);
 
-for (int i = 0; i < 10; i = i + 1;) {
+for (int i = 0; i < 10; i = i + 1) {
     int x = 10;
     print(i);
 }
 
 
-for (;i<10; i = i + 1;) {
-    int x = 10;
-    int y = 10;
-    int y (int x = 10, int y = 10) {
-        int z = x + y;
-    }
-    y();
-    y(10);
-}
+#for (;i<10; i = i + 1) {
+#    int x = 10;
+#    int y = 10;
+#    int y (int x = 10, int y = 10) {
+#        int z = x + y;
+#    }
+#    y();
+#    y(10);
+#}
 
-for (;;i = i+1;){
-    int x = 10;
-    int y = 10;
-}
-
-for (int i =0;;){
-    int x = 10;
-    int y = 10;
-}
+#for (;;i = i+1){
+#    int x = 10;
+#    int y = 10;
+#}
+#
+#for (int i =0;;){
+#    int x = 10;
+#    int y = 10;
+#}
 
 if ( x>10 ) {
     x = 11;
@@ -74,7 +71,7 @@ if ( x>10 ) {
 } else {
     x = 10;
     if ( x>10 ) {
-        for (int i = 0; i < 10;) {
+        for (int i = 0; i < 10; i = i + 1) {
             int x = 10;
             int y = 10;
             int y (int x = 10, int y = 10) {
@@ -137,7 +134,7 @@ switch (x) {
         break;
 }
 
-{
+{   
     int x;
     char x = 'a';
     char x = a;
@@ -221,3 +218,5 @@ float x (int x = 10, int y) {
 }
 
 int _test1;
+
+enum test t;
