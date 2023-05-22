@@ -14,8 +14,7 @@ bool z = x >= y;
 float z = -x;
 bool y = !x;
 
-int x [10] = {1,2,3,4,5,6,7,8,9,10};
-int x [10];
+
 
 void x (int x = 10, int y = 10) {
    

@@ -1,7 +1,9 @@
 Ex2/
 Ex3/
-a.exe
+*.exe
+*.out
 lex.yy.c
 parser.output
 parser.tab.c
 parser.tab.h
+Project*/
