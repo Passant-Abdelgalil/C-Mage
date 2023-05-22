@@ -5,6 +5,7 @@
     int yylex();
     extern FILE *yyin;
     extern FILE *yyout;
+    extern int yylineno;
 %}
 
 %token INT_DECLARATION FLOAT_DECLARATION CHAR_DECLARATION CONST_DECLARATION STRING_DECLARATION BOOL_DECLARATION ENUM_DECLARATION
@@ -28,16 +29,16 @@
 %right NOT
 
 %%
-program:                                statement_list                    {printf("program\n");}
+program:                                statement_list                    // {printf("program\n");}
 ;
 
-// declaration_list:                       declaration_list declaration            {printf("declaration_list\n");}
-// |                                       declaration                             {printf("declaration_list\n");}
+// declaration_list:                       declaration_list declaration            // {printf("declaration_list\n");}
+// |                                       declaration                             // {printf("declaration_list\n");}
 // ;
 
-declaration:                            variable_declaration ';'          {printf("variable declaration\n");}
-|                                       function_declaration              {printf("function declaration\n");}
-;
+declaration:                            variable_declaration ';'          // {printf("variable declaration\n");}
+|                                       function_declaration 
+      // {printf("function declaration\n");}
 
 variable_type:                          INT_DECLARATION                    
 |                                       FLOAT_DECLARATION
@@ -54,15 +55,20 @@ variable_type:                          INT_DECLARATION
 // |                                       VOID
 // ;
 
-variable_declaration:                   variable_type IDENTIFIER 
-|                                       variable_type IDENTIFIER '=' expression 
-/*|                                       variable_type IDENTIFIER '=' function_call      {printf("variable declared using function call\n");}*/
-/*|                                       variable_type IDENTIFIER '=' expression '+' function_call*/
-/* may remove arrays */
-|                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' 
-|                                       variable_type IDENTIFIER '[' INTEGER_CONSTANT ']' '=' '{' expression_list '}'
+variable_declaration:                   variable_type IDENTIFIER
+|                                       variable_type IDENTIFIER '=' expression
 |                                       enum_definition
 |                                       CONST_DECLARATION variable_type IDENTIFIER '=' expression
+|                                       variable_declaration_error
+{
+    yyerror("missing identifier");
+    yyerrok;
+}
+|                                       const_declaration_error
+{
+    yyerror("cannot declare constant without value");
+    yyerrok;
+}
 ;
 
 enum_definition:                        ENUM_DECLARATION IDENTIFIER'{' enum_list '}'
@@ -76,15 +82,11 @@ enum_opt_value:                         '=' INTEGER_CONSTANT
 |                                       /* empty */
 ;
 
-expression_list:                        expression_list ',' expression
-|                                       expression
-;
-
-expression:                             IDENTIFIER                            {printf("identifier expression\n");}
+expression:                             IDENTIFIER                            // {printf("identifier expression\n");}
 |                                       INTEGER_CONSTANT
 |                                       FLOAT_CONSTANT
-|                                       CHAR_CONSTANT                        {printf("char constant expression\n");}
-|                                       STRING_CONSTANT                      {printf("string constant expression\n");}
+|                                       CHAR_CONSTANT                        // {printf("char constant expression\n");}
+|                                       STRING_CONSTANT                      // {printf("string constant expression\n");}
 |                                       TRUE_KEYWORD                         
 |                                       FALSE_KEYWORD
 |                                       '(' expression ')'
@@ -104,16 +106,19 @@ expression:                             IDENTIFIER                            {p
 |                                       NOT expression
 |                                       '-' expression %prec UMINUS
 |                                       function_call
+|                                       expression_error
+{
+    yyerror("missing operand");
+    yyerrok;
+}
 ;
-    /* may not use arrays */
-// |                                       IDENTIFIER '[' expression ']'
 
 function_declaration:                   variable_type IDENTIFIER '(' parameter_list ')' block
 |                                       VOID IDENTIFIER '(' parameter_list ')' block
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'                {printf("function call\n");}
-|                                       reserved_functions '(' arguemnt_list ')'        {printf("print call\n");}
+function_call:                          IDENTIFIER '(' arguemnt_list ')'                // {printf("function call\n");}
+|                                       reserved_functions '(' arguemnt_list ')'        // {printf("print call\n");}
 ;
 
 /*reserved functions rule */
@@ -134,7 +139,7 @@ parameter_list:                         parameter_list ',' parameter
 parameter:                              variable_declaration
 ;
 
-block:                                  '{' statement_list '}'                 {printf("block\n");}
+block:                                  '{' statement_list '}'                 // {printf("block\n");}
 ;
 
 statement_list:                         statement statement_list
@@ -150,25 +155,21 @@ statement:                              expression ';'
 |                                       while_loop
 |                                       do_while_loop
 |                                       block
-|                                       RETURN ';'                                          {printf("empty return\n");}
-|                                       RETURN expression ';'                               {printf("return\n");}
-|                                       BREAK ';'                                           {printf("break\n");}
-|                                       CONTINUE ';'                                        {printf("continue\n");}
+|                                       RETURN ';'                                          // {printf("empty return\n");}
+|                                       RETURN expression ';'                               // {printf("return\n");}
+|                                       BREAK ';'                                           // {printf("break\n");}
+|                                       CONTINUE ';'                                        // {printf("continue\n");}
 |                                       switch_statement
 |                                       comments
+
 /*|                                       if while for ... */
 ;
 
-assignment:                             IDENTIFIER '=' expression ';'                       {printf("assignment\n");}
-/*|                                       IDENTIFIER '=' function_call ';'                     {printf("function assignment\n");}*/
+assignment:                             IDENTIFIER '=' expression ';'                       // {printf("assignment\n");}
+/*|                                       IDENTIFIER '=' function_call ';'                     // {printf("function assignment\n");}*/
 ;
 
-/*for_loop:                               FOR '(' statement statement statement ')' block     {printf("for loop\n");}
-|                                       FOR '(' statement statement ')' block               {printf("for loop\n");}
-|                                       FOR '(' statement ')' block                         {printf("for loop\n");}
-;*/
-
-for_loop:                               FOR '(' for_init ';' for_condition ';' for_update ')' block {printf("for loop\n");}
+for_loop:                               FOR '(' for_init ';' for_condition ';' for_update ')' block // {printf("for loop\n");}
 ;
 
 for_init:                               variable_declaration
@@ -184,18 +185,18 @@ for_update:                             assignment
 |                                       /* empty */
 ;
 
-if_statement:                           IF '(' expression ')' block %prec IFX               {printf("if statement\n");}
-|                                       IF '(' expression ')' block ELSE block              {printf("if statement with else\n");}
-|                                       IF '(' expression ')' block ELSE if_statement       {printf("if statement with else if\n");}
+if_statement:                           IF '(' expression ')' block %prec IFX               // {printf("if statement\n");}
+|                                       IF '(' expression ')' block ELSE block              // {printf("if statement with else\n");}
+|                                       IF '(' expression ')' block ELSE if_statement       // {printf("if statement with else if\n");}
 ;
 
-while_loop:                             WHILE '(' expression ')' block                      {printf("while loop\n");}
+while_loop:                             WHILE '(' expression ')' block                      // {printf("while loop\n");}
 ;
 
-do_while_loop:                          DO block WHILE '(' expression ')' ';'              {printf("do while loop\n");}
+do_while_loop:                          DO block WHILE '(' expression ')' ';'              // {printf("do while loop\n");}
 ;
 
-switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'         {printf("switch statement\n");}
+switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'         // {printf("switch statement\n");}
 ;
 
 case_list:                              case_list case
@@ -206,14 +207,23 @@ case:                                   CASE expression ':' statement_list
 |                                       DEFAULT ':' statement_list
 ;
 
-comments:                               SINGLE_LINE_COMMENT                            {printf("single line comment\n");}
-/*|                                       MULTI_LINE_COMMENT                           {printf("multi line comment\n");}*/
+comments:                               SINGLE_LINE_COMMENT                            // {printf("single line comment\n");}
+
+
+expression_error:                       expression '+'
+;
+
+variable_declaration_error:             variable_type 
+|                                       variable_type IDENTIFIER '=' 
+;
+
+const_declaration_error:                CONST_DECLARATION variable_type IDENTIFIER 
 ;
 
 %%
 
 void yyerror(char *s) {
-    fprintf(stdout, "%s\n", s);
+    fprintf(stderr, "\n%s at line %d\n", s, yylineno);
 }
 
 int main(int argc, char *argv[])
@@ -222,7 +232,7 @@ int main(int argc, char *argv[])
     yyparse();
     if (yywrap())
     {
-        printf("Parsing successful ya regala!\n");
+        printf("\nParsing successful ya regala!\n");
     }
     fclose(yyin); 
     return 0;
