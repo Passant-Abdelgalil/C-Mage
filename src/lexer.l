@@ -56,11 +56,13 @@
 [0-9]+"."[0-9]+                 { /* printf("%s",yytext); */ return FLOAT_CONSTANT; }
 "'"[a-zA-Z0-9]"'"               { /* printf("%s",yytext); */ return CHAR_CONSTANT; }
 \"[a-zA-Z0-9]+\"                { /* printf("%s",yytext); */ return STRING_CONSTANT; }
- 
+
 
 [ \t]+                        { /* printf("%s",yytext); */ } /* ignore whitespace */
 
 \n                            { ++yylineno; } /* ignore newlines */
+
+\r                            { } /* ignore newlines */
 
 .                               { /* printf("%s",yytext); */yyerror("Unknown character"); }
 

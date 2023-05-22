@@ -1,13 +1,13 @@
-lexer: 
+lexer:
 	flex lexer.l
 
-parser: 
+parser:
 	bison -d parser.y
 
 build: parser lexer
 
-phase1: build 
-		gcc parser.tab.c lex.yy.c 
+phase1: build
+		gcc parser.tab.c lex.yy.c
 		.\a.exe test.cpp
 
 testfile: build 
