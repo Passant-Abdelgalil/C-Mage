@@ -11,7 +11,8 @@
     extern FILE *yyin;
     extern FILE *yyout;
     extern char * yytext;
-    extern int lineno;
+    extern int yylineno;
+%}
 
 
     // type functions
@@ -96,24 +97,16 @@
 %right NOT
 
 %%
-program:                                statement_list                    {printf("program\n");}
+program:                                statement_list                    // {printf("program\n");}
 ;
 
-// declaration_list:                       declaration_list declaration            {printf("declaration_list\n");}
-// |                                       declaration                             {printf("declaration_list\n");}
+// declaration_list:                       declaration_list declaration            // {printf("declaration_list\n");}
+// |                                       declaration                             // {printf("declaration_list\n");}
 // ;
 
-declaration:                            variable_declaration ';'            {printf("variable declaration\n");}
-|                                       function_declaration                {printf("function declaration\n");}
-;
+declaration:                            variable_declaration ';'          // {printf("variable declaration\n");}
+|                                       function_declaration 
 
-variable_declaration:                   variable_type IDENTIFIER {printf("variable22\n"); insertSymbol( false, false, VARIABLE); }
-|                                       variable_type IDENTIFIER {printf("variable33\n"); insertSymbol( true, false, VARIABLE); } '=' expression 
-/*|                                       variable_type IDENTIFIER '=' function_call      {printf("variable declared using function call\n");}*/
-/*|                                       variable_type IDENTIFIER '=' expression '+' function_call*/
-|                                       enum_definition
-|                                       CONST_DECLARATION variable_type IDENTIFIER {printf("variable\n"); insertSymbol( true, true, VARIABLE); } '=' expression
-;
 
 variable_type:                          INT_DECLARATION                     { printf("var type\n"); updateLastSeenDatatype(); }       
 |                                       FLOAT_DECLARATION                   { printf("var type\n"); updateLastSeenDatatype(); }
@@ -130,6 +123,21 @@ variable_type:                          INT_DECLARATION                     { pr
 // |                                       VOID
 // ;
 
+variable_declaration:                   variable_type IDENTIFIER
+|                                       variable_type IDENTIFIER '=' expression
+|                                       enum_definition
+|                                       CONST_DECLARATION variable_type IDENTIFIER '=' expression
+|                                       variable_declaration_error
+{
+    yyerror("missing identifier");
+    yyerrok;
+}
+|                                       const_declaration_error
+{
+    yyerror("cannot declare constant without value");
+    yyerrok;
+}
+;
 
 enum_definition:                        ENUM_DECLARATION  IDENTIFIER '{' enum_list '}' {handleEnumDeclaration($2, $3)}
 ;
@@ -142,13 +150,13 @@ enum_opt_value:                         '=' INTEGER_CONSTANT
 |                                       /* empty */
 ;
 
-expression:                             IDENTIFIER                              {printf("identifier expression\n");}
-|                                       INTEGER_CONSTANT                        {printf("integer const\n"); insertSymbol( false, true, CONSTANT); }
-|                                       FLOAT_CONSTANT                          {printf("float const\n"); insertSymbol( false, true, CONSTANT); }
-|                                       CHAR_CONSTANT                           {printf("char const\n"); insertSymbol( false, true, CONSTANT); }
-|                                       STRING_CONSTANT                         {printf("string const\n"); insertSymbol( false, true, CONSTANT); }
-|                                       TRUE_KEYWORD                            {printf("true keyword\n"); insertSymbol( false, true, KEYWORD); }
-|                                       FALSE_KEYWORD                           {printf("false keyword\n"); insertSymbol( false, true, KEYWORD); }
+expression:                             IDENTIFIER                            // {printf("identifier expression\n");}
+|                                       INTEGER_CONSTANT
+|                                       FLOAT_CONSTANT
+|                                       CHAR_CONSTANT                        // {printf("char constant expression\n");}
+|                                       STRING_CONSTANT                      // {printf("string constant expression\n");}
+|                                       TRUE_KEYWORD                         
+|                                       FALSE_KEYWORD
 |                                       '(' expression ')'
 |                                       expression '+' expression
 |                                       expression '-' expression
@@ -166,16 +174,19 @@ expression:                             IDENTIFIER                              
 |                                       NOT expression
 |                                       '-' expression %prec UMINUS
 |                                       function_call
+|                                       expression_error
+{
+    yyerror("missing operand");
+    yyerrok;
+}
 ;
-    /* may not use arrays */
-// |                                       IDENTIFIER '[' expression ']'
 
 function_declaration:                   variable_type IDENTIFIER {printf("function1\n"); insertSymbol( false, false, FUNCTION); } '(' parameter_list ')' block
 |                                       VOID IDENTIFIER {printf("function\n"); insertSymbol( false, false, FUNCTION); } '(' parameter_list ')' block
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'                {printf("function call\n");}
-|                                       reserved_functions '(' arguemnt_list ')'        {printf("print call\n");}
+function_call:                          IDENTIFIER '(' arguemnt_list ')'                // {printf("function call\n");}
+|                                       reserved_functions '(' arguemnt_list ')'        // {printf("print call\n");}
 ;
 
 /*reserved functions rule */
@@ -196,7 +207,7 @@ parameter_list:                         parameter_list ',' parameter
 parameter:                              variable_declaration
 ;
 
-block:                                  '{' statement_list '}'                 {printf("block\n");}
+block:                                  '{' statement_list '}'                 // {printf("block\n");}
 ;
 
 statement_list:                         statement statement_list
@@ -212,21 +223,21 @@ statement:                              expression ';'
 |                                       while_loop
 |                                       do_while_loop
 |                                       block
-|                                       RETURN {printf("return\n"); insertSymbol( false, false, KEYWORD); } ';'                                          {printf("empty return\n");}
-|                                       RETURN {printf("return2\n"); insertSymbol( false, false, KEYWORD); } expression ';'                               {printf("return\n");}
-|                                       BREAK {printf("break\n"); insertSymbol(false, false, KEYWORD); } ';'                                           {printf("break\n");}
-|                                       CONTINUE {printf("continue\n"); insertSymbol( false, false, KEYWORD); } ';'                                        {printf("continue\n");}
+|                                       RETURN ';'                                          // {printf("empty return\n");}
+|                                       RETURN expression ';'                               // {printf("return\n");}
+|                                       BREAK ';'                                           // {printf("break\n");}
+|                                       CONTINUE ';'                                        // {printf("continue\n");}
 |                                       switch_statement
 |                                       comments
+
 /*|                                       if while for ... */
 ;
 
-assignment:                             IDENTIFIER '=' expression ';'                       {printf("assignment\n");}
-/*|                                       IDENTIFIER '=' function_call ';'                     {printf("function assignment\n");}*/
+assignment:                             IDENTIFIER '=' expression ';'                       // {printf("assignment\n");}
+/*|                                       IDENTIFIER '=' function_call ';'                     // {printf("function assignment\n");}*/
 ;
 
-
-for_loop:                               FOR {insertSymbol( false, false, KEYWORD);} '(' for_init ';' for_condition ';' for_update ')' block {printf("for loop\n");}
+for_loop:                               FOR '(' for_init ';' for_condition ';' for_update ')' block // {printf("for loop\n");}
 ;
 
 for_init:                               variable_declaration
@@ -243,26 +254,23 @@ for_update:                             assignment
 ;
 
 
-if_statement:                           IF { printf("if\n");insertSymbol(false, false, KEYWORD); } '(' expression ')' block else_statement
-/* |                                       IF '(' expression ')' block ELSE block              {printf("if statement with else\n");} */
-/* |                                       IF '(' expression ')' block ELSE if_statement       {printf("if statement with else if\n");} */
-;
-
 else_statement:                         ELSE statement
 |                                       /* empty */
 ;
 
-/* body:                                   statement
-|                                       block
-; */
 
-while_loop:                             WHILE { printf("while\n");insertSymbol(false, false, KEYWORD); } '(' expression ')' block
+if_statement:                           IF '(' expression ')' block %prec IFX               // {printf("if statement\n");}
+|                                       IF '(' expression ')' block ELSE block              // {printf("if statement with else\n");}
+|                                       IF '(' expression ')' block ELSE if_statement       // {printf("if statement with else if\n");}
 ;
 
-do_while_loop:                          DO { printf("do while\n");insertSymbol( false, false, KEYWORD); } block WHILE { insertSymbol( false, false, KEYWORD); } '(' expression ')' ';'              {printf("do while loop\n");}
+while_loop:                             WHILE '(' expression ')' block                      // {printf("while loop\n");}
 ;
 
-switch_statement:                       SWITCH {printf("switch\n"); insertSymbol( false, false, KEYWORD); } '(' expression ')' '{' case_list '}' 
+do_while_loop:                          DO block WHILE '(' expression ')' ';'              // {printf("do while loop\n");}
+;
+
+switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'         // {printf("switch statement\n");}
 ;
 
 case_list:                              case_list case
@@ -273,14 +281,23 @@ case:                                   CASE {printf("case\n"); insertSymbol( fa
 |                                       DEFAULT  { printf("case default\n"); insertSymbol(false, false, KEYWORD); }':' statement_list
 ;
 
-comments:                               SINGLE_LINE_COMMENT                            {printf("single line comment\n");}
-/*|                                       MULTI_LINE_COMMENT                           {printf("multi line comment\n");}*/
+comments:                               SINGLE_LINE_COMMENT                            // {printf("single line comment\n");}
+
+
+expression_error:                       expression '+'
+;
+
+variable_declaration_error:             variable_type 
+|                                       variable_type IDENTIFIER '=' 
+;
+
+const_declaration_error:                CONST_DECLARATION variable_type IDENTIFIER 
 ;
 
 %%
 
-void yyerror(const char *s) {
-    fprintf(stdout, "%s\n", s);
+void yyerror(char *s) {
+    fprintf(stderr, "\n%s at line %d\n", s, yylineno);
 }
 
 int main(int argc, char *argv[])
@@ -354,7 +371,7 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
         entry.name = varName;
         entry.type = CONSTANT;
         entry.value = varValue;
-        entry.lineno = lineno;
+        entry.lineno = yylineno;
         entry.initialized = true;
         entry.is_const = true;
 
@@ -427,7 +444,7 @@ void insertSymbol(bool initialized, bool is_const, SymbolType type) {
     symbolData.initialized = initialized;
     symbolData.is_const = is_const;
     symbolData.type = type;
-    symbolData.lineno = lineno;
+    symbolData.lineno = yylineno;
     printf("yytext is: %s\n", yytext);
     if (symbolData.type != VARIABLE && symbolData.type != FUNCTION) {
         printf("not variable \n");
