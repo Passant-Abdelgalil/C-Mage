@@ -4,7 +4,8 @@ lexer:
 parser: 
 	bison -d parser.y
 
-build: lexer parser
+build: parser lexer
 
-compile: build
-	gcc parser.tab.c lex.yy.c
+phase1: build 
+		gcc parser.tab.c lex.yy.c 
+		.\a.exe test.cpp
