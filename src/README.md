@@ -11,3 +11,8 @@ If an error is found, the program will print "Syntax error" and stop the parsing
   - `flex lexer.l`
   - `gcc parser.tab.c lex.yy.c`
   - `.\a.exe test.cpp`
+
+
+<!-- how to get the version of bison and flex -->
+<!-- bison --version -->
+<!-- flex --version -->
