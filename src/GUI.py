@@ -142,25 +142,41 @@ def compile_code(event=None):
     # TODO: compile code
     # system("python src\\compiler.py")
 
-    file = open("symbol_table.txt", "r")
+    file = open("output/symbol_table.txt", "r")
     symbol_table = file.read()
     file.close()
 
-    file = open("log.txt", "r")
-    log = file.read()
+    file = open("output/errors.txt", "r")
+    errors = file.read()
     file.close()
+
+    file = open("output/warnings.txt", "r")
+    warnings = file.read()
+    file.close()
+
+    errors_line_numbers = re.findall(r"Line (\d+)", errors)
+    errors_line_numbers = [int(line_number) for line_number in errors_line_numbers]
+
+    warnings_line_numbers = re.findall(r"Line (\d+)", warnings)
+    warnings_line_numbers = [int(line_number) for line_number in warnings_line_numbers]
+
+    # for each line in errors, add ERROR prefix to it
+    errors = "\n".join([f"ERROR  : {line}" for line in errors.split("\n") if line != ""])
+
+    # for each line in warnings, add WARNING prefix to it
+    warnings = "\n".join([f"WARNING: {line}" for line in warnings.split("\n") if line != ""])
+
+    # merge errors and warnings and sort them (based on line number at index 8
+    log = "\n".join(sorted([f"{line[8:]}" for line in (errors + "\n" + warnings).split("\n") if line != ""]))
 
     # log has this format:
     # Line <line_number>: <error_message>
     # if there is no error, log is empty, in which case we read the quadruples
 
-    errors_line_numbers = re.findall(r"Line (\d+)", log)
-    errors_line_numbers = [int(line_number) for line_number in errors_line_numbers]
-
     print(errors_line_numbers)
 
     if len(errors_line_numbers) == 0:
-        file = open("quad.asm", "r")
+        file = open("output/quad.asm", "r")
         quadruples = file.read()
         file.close()
 
@@ -172,6 +188,10 @@ def compile_code(event=None):
             text_editor.tag_add("error", f"{line_number}.0", f"{line_number}.end")
 
         swap_quadruples_symbol_table(choice = 'symbol_table')
+
+    # highlight warnings
+    for line_number in warnings_line_numbers:
+        text_editor.tag_add("warning", f"{line_number}.0", f"{line_number}.end")
 
     # update text boxes
     text_log.insert(tk.INSERT, log)
@@ -207,6 +227,7 @@ def highlight_code(code):
     global tag_dict
 
     text_editor.tag_remove("error", "1.0", tk.END)
+    text_editor.tag_remove("warning", "1.0", tk.END)
 
     # loop through all tag types as keys and their values
     for tag_type, tag_values in tag_dict.items():
@@ -308,6 +329,9 @@ for tag_type, tag_color in color_dict.items():
 
 text_editor.tag_config("error", background="#550000", font=(
     "Consolas", 14, "bold"), foreground="#ff0000")
+
+text_editor.tag_config("warning", background="#444400", font=(
+    "Consolas", 14, "bold"), foreground="#ffff00")
 
 text_editor.pack()
 
