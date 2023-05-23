@@ -1,2 +1,0 @@
-Line 5: Can not declare constant without intialization
-Line 15: warning 202: Redeclaration of 'i' with a different type: 'int' vs 'float'

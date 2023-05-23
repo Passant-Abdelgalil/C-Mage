@@ -8,7 +8,7 @@ build: parser lexer
 
 phase1: build
 		gcc parser_new.tab.c lex.yy.c
-		.\a.exe test.cpp
+		.\a.exe testscope.cpp
 
 testfile: build
 		gcc parser_new.tab.c lex.yy.c
