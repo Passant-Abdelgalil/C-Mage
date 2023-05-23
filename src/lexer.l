@@ -1,23 +1,29 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
-    #include "parser.tab.h"
+    #include "parser_new.tab.h"
     void yyerror(char *);
     extern int yylineno;
 %}
+
+
+%option yylineno
+
 
 %%
 
 #[\s\t]*.*                       {/* printf("%s",yytext); */} /* ignore comments */
 
     /* variables and constants declaration */
-"int"                           { /* printf("%s",yytext); */ return INT_DECLARATION; }
+"int"                           {   yylval.STRING = strdup(yytext); 
+                                    return INT_DECLARATION; }
 "float"                         { /* printf("%s",yytext); */ return FLOAT_DECLARATION; }
 "char"                          { /* printf("%s",yytext); */ return CHAR_DECLARATION; }
 "bool"                          { /* printf("%s",yytext); */ return BOOL_DECLARATION; }
 "const"                         { /* printf("%s",yytext); */ return CONST_DECLARATION; }
 "string"                        { /* printf("%s",yytext); */ return STRING_DECLARATION; }
-"enum"                          { /* printf("%s",yytext); */ return ENUM_DECLARATION; }
+"enum"                          {   yylval.STRING = strdup(yytext); 
+                                    return ENUM_DECLARATION; }
 
     /* mathematical and logical expressions */
 [-+*/%(){};:=,\[\]]             { /* printf("%s",yytext); */ return *yytext; }
@@ -51,11 +57,11 @@
 "true"                          { /* printf("%s",yytext); */ return TRUE_KEYWORD; }
 "false"                         { /* printf("%s",yytext); */ return FALSE_KEYWORD; }
 
-[a-zA-Z_][a-zA-Z0-9_]*          { /* printf("%s",yytext); */ return IDENTIFIER; }
-[0-9]+                          { /* printf("%s",yytext); */ return INTEGER_CONSTANT; }
-[0-9]+"."[0-9]+                 { /* printf("%s",yytext); */ return FLOAT_CONSTANT; }
-"'"[a-zA-Z0-9]"'"               { /* printf("%s",yytext); */ return CHAR_CONSTANT; }
-\"[a-zA-Z0-9]+\"                { /* printf("%s",yytext); */ return STRING_CONSTANT; }
+[a-zA-Z_][a-zA-Z0-9_]*          { yylval.STRING = strdup(yytext);  return IDENTIFIER; }
+[0-9]+                          { yylval.INTEGER = atoi(yytext);  return INTEGER_CONSTANT; }
+[0-9]+"."[0-9]+                 { yylval.INTEGER = atof(yytext); return FLOAT_CONSTANT; }
+"'"[a-zA-Z0-9]"'"               { yylval.STRING = strdup(yytext); return CHAR_CONSTANT; }
+\"[a-zA-Z0-9]+\"                { yylval.STRING = strdup(yytext);  return STRING_CONSTANT; }
 
 
 [ \t]+                        { /* printf("%s",yytext); */ } /* ignore whitespace */
