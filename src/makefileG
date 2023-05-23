@@ -1,0 +1,26 @@
+lexer:
+	flex lexer.l
+
+parser:
+	bison -d parser_new.y -Weverything
+
+build: parser lexer
+
+phase1: build
+		gcc parser.tab.c lex.yy.c
+		.\a.exe test.cpp
+
+testfile: build 
+		gcc parser.tab.c lex.yy.c 
+		.\a.exe $(FILE)
+
+
+k: build
+	gcc parser_new.tab.c lex.yy.c
+	./a.out gen.cpp
+	rm a.out parser_new.tab.c parser_new.tab.h lex.yy.c
+
+ki: build
+	gcc parser_new.tab.c lex.yy.c
+	./a.out
+	rm a.out parser_new.tab.c parser_new.tab.h lex.yy.c

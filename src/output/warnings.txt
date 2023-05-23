@@ -1,1 +1,3 @@
-Line 8: Variable  used before, initialization
+Line 4: Variable  used before, initialization
+Line 9: Variable  used before, initialization
+Line 26: Variable  used before, initialization

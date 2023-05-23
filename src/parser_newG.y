@@ -12,31 +12,25 @@
     extern FILE *yyout;
     extern int yylineno;
 
-    void printSymbolTable();
-    void printWarnings();
-    void printErrors();
-
     typedef enum { KEYWORD, FUNCTION, VARIABLE, CONSTANT, ENUM } SymbolType;
     char* types [5] = {"KEYWORD", "FUNCTION", "VARIABLE", "CONSTANT", "ENUM"};
 
     typedef enum {Int, Float, String, Bool, Char} valueDatatype;
     char* datatypes [5] = {"int", "float", "string", "bool", "char"};
     int typeToEnum(char* value) {
-        printf("TYPE TO ENUM type is %s\n", value);
         for (int i = 0; i < 5; i++) {
             if (strcmp(datatypes[i], value) == 0) {
                 return i;
             }
         }
-        printSymbolTable();
         return -1; // Value not found
     }
-
-    typedef struct  {
-        char** parameterNames;
-        char** parameterTypes;
-        char* returnType;
-    }FunctionData;
+    union NodeValue {
+        int i;
+        float f;
+        char* str;
+        bool b;
+    };
 
     typedef struct  {
         char *name;                         /* symbol name */
@@ -44,8 +38,8 @@
         SymbolType type;               /* symbol type [function, variable, ...etc] */
         int lineno;                         /* line number where this symbol's declared */
         bool initialized, is_const, is_used;   /* flags to indicate the state of the symbol */
-        
-        FunctionData functionData;
+        // int scope;
+        // int scopes[10];
     } SymbolTableEntryType;
 
     typedef struct {
@@ -56,29 +50,19 @@
 
     int errorCount = 0;
     char **errors;
-    int warningCount = 0;
-    char **warnings;
-
-    bool errorCode = false;
 
     SymbolTable symbolTable;
-    
-
     struct nodeType {
         valueDatatype type;
         char *value;
         bool is_const;
-        bool initialized;
     };
-
-
-    
     void initSymbolTable(size_t initialSize);
-
+    void printSymbolTable();
 
     // Variables Functions
     bool handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
-    bool handleFunctionDeclaration(char* type, char* identifier, char* parameters);
+
     // Enums Functions
     void handleEnumDeclaration(char* identifier, char* enumValues);
     void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType *value);
@@ -89,7 +73,6 @@
     void insertSymbol(SymbolTableEntryType symbol);
     int  getSymbolIdx(char* symbolName);
     void setUsed(char* identifier);
-    int checkInitialization(char* identifier);
     // Helper functions
 
     char *ltrim(char *s)
@@ -122,10 +105,9 @@
     struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2);
     struct nodeType* dupNode(struct nodeType* node);
     struct nodeType* getNode(char* identifier);
-    void initializationError(char * identifier);
 
 
-#define STACK_SIZE 1000
+    #define STACK_SIZE 1000
     char *stak[STACK_SIZE];
     int stakNext = 0;
 
@@ -235,7 +217,7 @@
 }
 
 
-%token<STRING> VOID IDENTIFIER STRING_DECLARATION ENUM_DECLARATION CONST_DECLARATION BOOL_DECLARATION CHAR_DECLARATION FLOAT_DECLARATION INT_DECLARATION PRINT
+%token<STRING> IDENTIFIER STRING_DECLARATION ENUM_DECLARATION CONST_DECLARATION BOOL_DECLARATION CHAR_DECLARATION FLOAT_DECLARATION INT_DECLARATION PRINT
 %token<INTEGER> INTEGER_CONSTANT
 %token<FLOAT> FLOAT_CONSTANT
 %token<CHAR>  CHAR_CONSTANT
@@ -244,7 +226,7 @@
 
 %token AND OR NOT EQ NE LT GT LE GE
 %token IF ELSE WHILE FOR DO SWITCH CASE DEFAULT BREAK CONTINUE
-%token RETURN  
+%token RETURN VOID 
 %token SINGLE_LINE_COMMENT 
 %nonassoc IFX
 %nonassoc ELSE
@@ -257,9 +239,6 @@
 %type <STRING> function_call
 %type <node_type> expression
 %type <node_type> const_expression
-%type <STRING> general_declaration
-%type <STRING> parameter_list
-%type <STRING> parameter
 /* %type <STRING> expression_error */
 
 
@@ -283,28 +262,25 @@ statement_list:                         statement ';'
 |                                       statement error ';' {yyerrok;}
 ;
 
-braced_statements:                      '{' statement_list '}'  //{printf("braced statements\n");}
+braced_statements:                      '{' {inc_scope();} statement_list '}' {dec_scope();}
 ;
 
 statement:                              expression
 |                                       variable_declaration
 |                                       assignment  
-|                                       RETURN                              { /*rtn(); */}                              
-|                                       RETURN expression                   { /* rtn();*/ }                         
+|                                       RETURN                       { /*rtn(); */}                                // {printf("empty return\n");}
+|                                       RETURN expression             { /* rtn();*/ }                          // {printf("return\n");}
 |                                       BREAK                        {jmp(2);}                 // {printf("break\n");}
 |                                       CONTINUE                       {jmp(1);}                  // {printf("continue\n");}
 |                                       
 ;
 
-general_declaration:                    variable_type IDENTIFIER                                                { handleVariableDeclaration($1, $2, NULL, false); sprintf($$, "%s:%s", $1, $2);}
-|                                       variable_type IDENTIFIER '=' {push($2);} expression                     { if(handleVariableDeclaration($1, $2, $5, false)) sto();  sprintf($$, "%s:%s", $1, $2);}
-|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression   { if(handleVariableDeclaration($2, $3, $6, true)) sto();  sprintf($$, "%s:%s", $1, $2);}
-;
-
-variable_declaration:                   general_declaration
+variable_declaration:                   variable_type IDENTIFIER                                        { handleVariableDeclaration($1, $2, NULL, false); }
+|                                       variable_type IDENTIFIER '=' {push($2);} expression             { if(handleVariableDeclaration($1, $2, $5, false)) sto(); }
 |                                       enum_definition
-|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER                                  { handleEnumVariableDeclaration($2, $3, NULL); }
-|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER {push($3);}'=' expression        { sto(); handleEnumVariableDeclaration($2, $3, $6);}
+|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression { if(handleVariableDeclaration($2, $3, $6, true)) sto();}
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER                { handleEnumVariableDeclaration($2, $3, NULL); }
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER {push($3);}'=' expression  { sto(); handleEnumVariableDeclaration($2, $3, $6);}
 |                                       variable_declaration_error
 {
     yyerror("missing identifier");
@@ -312,12 +288,8 @@ variable_declaration:                   general_declaration
 }
 |                                       const_declaration_error
 {
-    errors = realloc(errors, sizeof(char*) * (errorCount+1));
-    int errorMsgLen = strlen("Line %d: Can not declare constant without intialization") +
-                        snprintf(NULL, 0, "%d", yylineno) - 1;
-    errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-    sprintf(errors[errorCount], "Line %d: Can not declare constant without intialization", yylineno);
-    errorCount++;
+    yyerror("cannot declare constant without value");
+    yyerrok;
 }
 ;
 
@@ -332,7 +304,7 @@ variable_type:                          INT_DECLARATION                     { $$
 enum_definition:                        ENUM_DECLARATION IDENTIFIER '{' enum_list '}' { handleEnumDeclaration($2, $4); }
 ;
 
-enum_state:                             IDENTIFIER '=' INTEGER_CONSTANT     {push($1); sprintf($$, "%s=%d", $1, $3);push(ito_str($3)); sto(); }
+enum_state:                             IDENTIFIER '=' INTEGER_CONSTANT     { push($1); sprintf($$, "%s=%d", $1, $3); push(ito_str($3)); sto();}
 |                                       IDENTIFIER                          { sprintf($$, "%s", $1); }
 ;
 
@@ -340,16 +312,16 @@ enum_list:                              enum_list ',' enum_state            {spr
 |                                       enum_state                          {$$ = $1;}
 ;
 
-const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); char str[30]; sprintf(str, "%d", $1); push(str);}
-|                                       FLOAT_CONSTANT                      { $$ = floatNode($1); char str[30]; sprintf(str, "%f", $1); push(str);}
-|                                       CHAR_CONSTANT                       { $$ = charNode($1); char str[3]; sprintf(str, "%c", $1); push(str);}
+const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); char str[30];sprintf(str, "%d", $1); push(str);}
+|                                       FLOAT_CONSTANT                      { $$ = floatNode($1); char str[30];sprintf(str, "%f", $1); push(str);}
+|                                       CHAR_CONSTANT                       { $$ = charNode($1); char str[3];sprintf(str, "%c", $1); push(str);}
 |                                       STRING_CONSTANT                     { $$ = stringNode($1); push($1); }
 |                                       TRUE_KEYWORD                        { $$ = boolNode($1); push("true");}
 |                                       FALSE_KEYWORD                       { $$ = boolNode($1); push("false");}
 ;
 
 
-expression:                             IDENTIFIER                              { $$ = getNode($1); push($1); setUsed($1);}
+expression:                             IDENTIFIER                              { $$ = getNode($1); push($1);}
 |                                       const_expression                        { $$ = dupNode($1); }
 |                                       '(' expression ')'                      { $$ = dupNode($2); }
 |                                       expression '+' expression               { $$ = combineNode($1, $3); expr("+"); }
@@ -375,8 +347,8 @@ expression:                             IDENTIFIER                              
 } */
 ;
 
-function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
-|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
+function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
+|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/} '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
 ;
 
 function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; /*call_func($1);*/}
@@ -388,22 +360,26 @@ arguemnt_list:                          arguemnt_list ',' expression
 |                                    /* empty */
 ;
 
-parameter_list:                         parameter_list ',' parameter                            { sprintf($$, "%s,%s", $1, $3); }
-|                                       parameter                                               { sprintf($$, "%s", $1); }
-|                                       /* empty */                                             { $$ = "";}
+parameter_list:                         parameter_list ',' parameter
+|                                       parameter
+|                                       /* empty */
 ;
 
-parameter:                              general_declaration                                     { $$ = $1; }
+parameter:                              variable_declaration
 ;
 
-control_statement:                      if_statement            {/*pop the labels */ /*pop(2);*/}
-|                                       while_loop              {/*pop the labels */ /*pop(2);*/}
+control_statement:                      if_statement
+|                                       while_loop
 |                                       do_while_loop
 |                                       switch_statement
 |                                       for_loop
 |                                       comments
 |                                       function_declaration
+
+
+/*missing_semicolon:                      expression error
 ;
+*/
 
 assignment:                             IDENTIFIER {push($1);} '=' expression {sto();}                       // {printf("assignment\n");}
 ;
@@ -413,6 +389,7 @@ for_loop:                               FOR '(' variable_declaration ';'
                                         {print_lbl(1);} assignment {jmp(4);} ')' {print_lbl(3);}
                                         braced_statements {jmp(1);print_lbl(2);pop_lbl(4);}
 ;
+
 if_stmt:                                IF '(' expression ')' {psh_lbl(2);test();jz(1);}
 
 if_statement:                           if_stmt braced_statements      {print_lbl(1);pop_lbl(2);}
@@ -425,8 +402,7 @@ while_loop:                             WHILE {psh_lbl(2);print_lbl(1);} '(' exp
 do_while_loop:                          DO {psh_lbl(3);print_lbl(3);} braced_statements {print_lbl(1);} WHILE '(' expression ')' {test();jnz(3);print_lbl(2);pop_lbl(3);} ';'
 ;
 
-
-switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'          
+switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'
 ;
 
 case_list:                              case_list case
@@ -461,110 +437,19 @@ int main(int argc, char *argv[])
     yyin = fopen(argv[1], "r");
     initSymbolTable(1000);
     printf("will parse\n");
+    initCodeGen();
     yyparse();
-    printSymbolTable();
-    printErrors();
-    printWarnings();
+    // printSymbolTable();
 
     if (yywrap())
     {
-        printf("\nParsing successful ya regala!\n");
+      printf("\nParsing successful ya regala!\n");
     }
     fclose(yyin); 
     return 0;
 }
 
-void initializationError(char* identifier) {
-    warnings = realloc(warnings, sizeof(char*) * (warningCount+1));
-    int warningMsgLen = strlen("Line %d: Variable %s used before initialization") +
-                        strlen(identifier) +
-                        snprintf(NULL, 0, "%d", yylineno) - 1;
-    warnings[warningCount] = malloc(sizeof(char) * warningMsgLen);
-    sprintf(warnings[warningCount], "Line %d: Variable %s used before, initialization", yylineno, identifier);
-    warningCount++;
-}
 
-bool handleFunctionDeclaration(char* type, char* identifier, char* parameters) {
-    printf("inside function declaration: %s %s (%s)\n", type, identifier, parameters);
-    
-    int symbolIdx = getSymbolIdx(identifier);
-    if(symbolIdx != -1 ){
-        errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Variable redeclaration, %s initially declared at %d") +
-                            snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
-                            strlen(identifier) +
-                            snprintf(NULL, 0, "%d", yylineno) - 1;
-        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Variable redeclaration, %s initially declared at %d", 
-                                    yylineno, identifier, symbolTable.array[symbolIdx].lineno);
-        errorCount++;
-        return false;
-    }
-
-    FunctionData functionData;
-    functionData.returnType = strdup(type);
-    functionData.parameterNames = malloc(sizeof(char**));
-    functionData.parameterTypes = malloc(sizeof(char**));
-    
-    char *parameter;
-    int num_tokens = 0;
-    // Get the first parameter
-    parameter = strtok(parameters, ",");
-    // Iterate over the rest of the tokens
-    while (parameter != NULL) {
-        num_tokens++;
-        printf("inside while loop\n");
-
-        functionData.parameterNames = realloc(functionData.parameterNames, num_tokens * sizeof(char*)); // Resize the tokens array
-        functionData.parameterTypes = realloc(functionData.parameterTypes, num_tokens * sizeof(char*)); // Resize the tokens array
-        
-        char* token = strtok(parameter, ":");
-        char* parameterName;
-        char* parameterType;
-        if (token != NULL)
-            parameterType = strdup(token);
-        else{
-            printf("Something is wrong in function parameters %s\n", parameters);
-            break;
-        }
-        
-        token = strtok(parameter, ":");
-        if (token != NULL) 
-            parameterName = strdup(token);
-        else {
-            printf("Something is wrong in function parameters %s\n", parameters);
-            break;
-        }
-        
-        functionData.parameterTypes[num_tokens - 1] = malloc(strlen(parameterType) + 1); // Allocate memory for the token
-        functionData.parameterNames[num_tokens - 1] = malloc(strlen(parameterName) + 1); // Allocate memory for the token
-
-        parameter= strtok(NULL, ",");
-    }
-
-    /* insert the new variable in the symbol table */
-    SymbolTableEntryType entry;
-    entry.name = trim(strdup(identifier));
-    entry.type = FUNCTION;
-    entry.lineno = yylineno;
-
-    entry.is_const = true;
-    entry.is_used = false;
-    entry.initialized = true;
-
-    entry.datatype = strdup(type);
-    entry.functionData = functionData;
-
-    insertSymbol(entry);
-    return true;
-}
-
-void setUsed(char* identifier)
-{
-    int symbolIdx =  getSymbolIdx(identifier);
-    if(symbolIdx == -1) return;
-    symbolTable.array[symbolIdx].is_used = true;
-}
 void push(char * name) {
   // printf("begin, push\n");
   chk_overflow(1);
@@ -640,7 +525,6 @@ struct nodeType* getNode(char* identifier) {
         p->type = typeToEnum(symbolTable.array[symbolIdx].datatype);
         p->value = strdup(identifier);
         p->is_const = symbolTable.array[symbolIdx].is_const;
-        p->initialized = symbolTable.array[symbolIdx].initialized;
     }
 
     return p;
@@ -649,9 +533,8 @@ struct nodeType* getNode(char* identifier) {
 struct nodeType* intNode(int value) {
     struct nodeType* p = malloc(sizeof(struct nodeType));
     
-	p->type = Int;
+  p->type = Int;
     p->is_const = true;
-    p->initialized = true;
 
     int num_digits = snprintf(NULL, 0, "%d", value);
     // Allocate memory for the string based on the number of digits
@@ -666,7 +549,6 @@ struct nodeType* floatNode(float value) {
 
     p->type = Float;
     p->is_const = true;
-    p->initialized = true;
 
     int num_digits = snprintf(NULL, 0, "%f", value);
     // Allocate memory for the string based on the number of digits
@@ -678,91 +560,48 @@ struct nodeType* floatNode(float value) {
 }
 
 struct nodeType* boolNode(char* value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));
+    struct nodeType* p = malloc(sizeof(struct nodeType));;
     
     p->type = Bool;
     p->is_const = true;
-    p->initialized = true;
 
     p-> value = strcmp(value, "true") == 0? "1": "0";
     return p;
 }
  struct nodeType* charNode(char value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));
+    struct nodeType* p = malloc(sizeof(struct nodeType));;
     p->type = Char;
     p->is_const = true;
-    p->initialized = true;
-
     p->value = malloc(sizeof(char*)*1);
     sprintf(p->value, "%c", value);
     return p;
  }
 struct nodeType* stringNode(char* value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));    
+    struct nodeType* p = malloc(sizeof(struct nodeType));;
+    
     p->type = String;
     p->is_const = true;
-    p->initialized = true;
-
     p->value = strdup(value);
     return p;
 }
+
 
 struct nodeType* dupNode(struct nodeType* node){
     struct nodeType* p = malloc(sizeof(struct nodeType));
 
     p->is_const = node->is_const;
     p->value = node->value;
-    p->initialized = node->initialized;
-
     p->type = node->type;
+
     return p;
 }
 
 
 struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
     struct nodeType* p = malloc(sizeof(struct nodeType));
-    if(node1 == NULL) printf("node1 is null\n");
-    else              printf("node1 value is: %s and type is: %d\n", node1->value, node1->type);
-    if(node2 == NULL) printf("node2 is null\n");
-    else              printf("node2 value is: %s and type is: %d\n", node2->value, node2->type);
-    
-    // check if both nodes have the same type
-    // if not, output an error message
-    if(node1->type != node2->type) {
-        errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Can not combine different types") +
-                            snprintf(NULL, 0, "%d", yylineno) - 1;
-        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Can not combine different types", yylineno);
-        errorCount++;
-        printf("first condition\n");
-        return NULL;
-    }
-
-    // check if both nodes have values ( both are initialized )
-    // if not, output an warning using Passant's initializationError(char* identifier) function
-    // check which of them is not initialized and output the warning
-    if (!node1->initialized && !node2->initialized) {
-        initializationError("");
-        printf("second condition\n");
-
-        return NULL;
-    }
-    else if (!node1->initialized) {
-        initializationError("");
-        printf("third condition\n");
-        return NULL;
-    }
-    else if (!node2->initialized) {
-        initializationError("");
-        printf("fourth condition\n");
-        return NULL;
-    }
 
     p->is_const = node1->is_const && node2->is_const;
-    p->initialized = node1->initialized && node2->initialized;
     p->type = node1->type;
-
     return p;
 }
 
@@ -774,88 +613,45 @@ void initSymbolTable(size_t initialSize) {
 }
 
 bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* value, bool is_const) {
-    if(value != NULL)
-        printf("inside handle variable with: %s %s = %s\n", type,  identifier, value->value);
-    else
-        printf("inside handle variable with: %s %s\n", type,  identifier);
+    // if(value != NULL)
+    //     printf("inside handle variable with: %s %s = %s\n", type,  identifier, value->value);
+    // else
+    //     printf("inside handle variable with: %s %s\n", type,  identifier);
 
     /* check if the enumName exists in symbol table */
     int symbolIdx = getSymbolIdx(trim(strdup(identifier)));
     if(symbolIdx != -1) {
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Variable redeclaration, %s initially declared at %d") +
+        int errorMsgLen = strlen("Line %d: Variable redeclaration, initially declared at %d") +
                             snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
-                            strlen(identifier) +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Variable redeclaration, %s initially declared at %d", 
-                                    yylineno, identifier, symbolTable.array[symbolIdx].lineno);
+        sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno, symbolTable.array[symbolIdx].lineno);
         errorCount++;
         return false;
     }
-    if(value == NULL) printf("value is null\n");
 
     if(is_const && (value != NULL && !(value->is_const))){
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
         int errorMsgLen = strlen("Line %d: Can not assign variable value to const") +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        printf("lineno with variable to const is: %d\n", yylineno);
         sprintf(errors[errorCount], "Line %d: Can not assign variable value to const", yylineno);
         errorCount++;
         return false;
     }
-
-    // check if we are assigning an uninitialized variable to another variable
-    // if uninitialized, print an warning
-    if(value != NULL && !value->initialized) {
-        initializationError("");
-        return false;
-    }
-
-    // check if we are assigning an incompatible type to a variable
-    // if incompatible, print an error
-    if(value != NULL && typeToEnum(type) != value->type) {
-        errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Can not assign variable value to const") +
-                            snprintf(NULL, 0, "%d", yylineno) - 1;
-        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Can not assign variable value to const", yylineno);
-        errorCount++;
-        return false;
-    }
-
 
     /* insert the new variable in the symbol table */
     SymbolTableEntryType entry;
     entry.name = trim(strdup(identifier));
     entry.type = is_const? CONSTANT : VARIABLE;
     entry.lineno = yylineno;
+    entry.initialized = (value != NULL);
     entry.is_const = is_const;
-    entry.is_used = false;
     entry.datatype = strdup(type);
-    if (value != NULL){
-        if(value->value != NULL){
-            int initialized = checkInitialization(value->value);
-            if (initialized != -1)
-                entry.initialized = initialized;
-            else
-                entry.initialized = (value->value != NULL);
-        }
-        else 
-            entry.initialized = true;
-    }
-    else 
-        entry.initialized = false;
-    
+
     insertSymbol(entry);
     return true;
-}
-
-int checkInitialization(char* identifier) {
-    int symbolIdx = getSymbolIdx(identifier);
-    if(symbolIdx != -1) return symbolTable.array[symbolIdx].initialized;
-    return -1;
 }
 
 void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType* node) {
@@ -1019,6 +815,61 @@ char* getType(char* variable) {
     return strchr(variable, '.') == NULL ? "int" : "float";
 }
 
+char* checkTypes(char* op1, char* op2, char* op) {
+    printf("inside checkTypes: %s %s %s\n", op1, op2, op);
+
+    char* oper1, oper2;
+    char* type1 = getType(op1);
+    char* type2 = getType(op2);
+    bool stringOperation =  strcmp(type1, "string") == 0 ||
+                            strcmp(type2, "string") == 0 || 
+                            strcmp(type1, "char")   == 0 || 
+                            strcmp(type2, "char")   == 0;
+
+    /* + , - , * , / , % */
+    if(strcmp(op, "+") == 0 || strcmp(op, "-") == 0 ||
+        strcmp(op, "*") == 0 || strcmp(op, "/") == 0 || strcmp(op, "%") == 0) {
+        if(stringOperation) {
+            errors = realloc(errors, sizeof(char*) * (errorCount+1));
+            int errorMsgLen = strlen("Line %d: Mathematical operations can only be applied on numeric values") + snprintf(NULL, 0, "%d", yylineno) - 1; 
+            errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+            sprintf(errors[errorCount], "Line %d: Mathematical operations can only be applied on numeric values", yylineno);
+            errorCount++;
+            return "ERROR";
+        }
+        if(strcmp(type1, "float") == 0 || strcmp(type2, "float") == 0)
+            return "float";
+        else
+            return "int";
+    }
+
+    /* &&, ||, !,  */
+    if(strcmp(op, "&&") == 0 || strcmp(op, "||") == 0 || strcmp(op, "!") == 0){
+        if(stringOperation){
+            errors = realloc(errors, sizeof(char*) * (errorCount+1));
+            int errorMsgLen = strlen("Line %d: Logical operations can only be applied on numeric values") + snprintf(NULL, 0, "%d", yylineno) - 1; 
+            errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+            sprintf(errors[errorCount], "Line %d: Logical operations can only be applied on numeric values", yylineno);
+            errorCount++;
+            return "ERROR";
+        }
+        return "bool";
+
+    }
+    /* < , >, == , <= , >= , !=  */
+    if(strcmp(type1, type2) != 0){
+        errors = realloc(errors, sizeof(char*) * (errorCount+1));
+        int errorMsgLen = strlen("Line %d: Type mismatch, operation %s can not be from %s to %s") +
+                        strlen(type1) + strlen(type2) + snprintf(NULL, 0, "%d", yylineno) - 1;
+        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+        sprintf(errors[errorCount], "Line %d: Type mismatch, operation %s can not be from %s to %s",
+                yylineno, op, type1, type2);
+        errorCount++;
+        return "ERROR";
+    }
+
+    return "bool";
+}
 
 int getSymbolIdx(char* symbolName) {
     for (int i=0; i < symbolTable.used; i++){
@@ -1042,50 +893,19 @@ void insertSymbol(SymbolTableEntryType symbol) {
     /* printf("inserted\n"); */
 }
 
-void printErrors(){
-    FILE *fp = fopen("output/errors.txt", "w");
-    if(fp == NULL) {
-        printf("Error opening errors.txt file!\n");
-        exit(1);
-    }
-
-    for (int i = 0; i < errorCount; i++)
-        fprintf(fp, "%s\n", errors[i]);
-}
-
-void printWarnings(){
-    FILE *fp = fopen("output/warnings.txt", "w");
-    if(fp == NULL) {
-        printf("Error opening warnings.text file!\n");
-        exit(1);
-    }
-
-    for (int i = 0; i < warningCount; i++)
-        fprintf(fp, "%s\n", warnings[i]);
-}
-
 void printSymbolTable() {
-     // write symbol table to file
-    FILE *fp = fopen("output/symbol_table.txt", "w");
-    if(fp == NULL) {
-        printf("Error opening symbol_table.txt file!\n");
-        exit(1);
-    }
+    printf("\nName\tData Type\tType\tLine\tConst\tInitialized\n");
+    
+    for (int i=0; i < symbolTable.used; i++){
+        SymbolTableEntryType *symbolData = &(symbolTable.array[i]);
 
-    fprintf(fp, "\nName\tData Type\tType\tLine\tConst\tInitialized\tUsed\n");
-
-    for(int i=0; i < symbolTable.used; i++) {
-        SymbolTableEntryType entry = symbolTable.array[i];
-
-        fprintf(fp, "%s\t%s\t%s\t%d\t%s\t%s\t%s\n", 
-            entry.name,
-            entry.datatype,
-            types[entry.type], 
-            entry.lineno,
-            entry.is_const? "YES" : "NO", 
-            entry.initialized? "YES" : "NO",
-            entry.is_used? "YES" : "NO"
-        ); 
+        printf("%s\t%s\t%s\t%d\t%s\t%s\n",
+            symbolData->name,
+            symbolData->datatype, 
+            types[symbolData->type],
+            symbolData->lineno,
+            symbolData->is_const ? "YES" : "NO", 
+            symbolData->initialized ? "YES": "NO");
     }
 }
 

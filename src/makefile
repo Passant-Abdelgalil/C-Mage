@@ -2,16 +2,16 @@ lexer:
 	flex lexer.l
 
 parser:
-	bison -d parser.y
+	bison -d parser_new.y
 
 build: parser lexer
 
 phase1: build
-		gcc parser.tab.c lex.yy.c
+		gcc parser_new.tab.c lex.yy.c
 		.\a.exe test.cpp
 
-testfile: build 
-		gcc parser.tab.c lex.yy.c 
+testfile: build
+		gcc parser_new.tab.c lex.yy.c
 		.\a.exe $(FILE)
 
 phase2:
@@ -24,4 +24,4 @@ phase2_ubnutu:
 	bison -d parser_new.y
 	flex lexer.l
 	gcc parser_new.tab.c lex.yy.c
-	./a.out function_test.cpp
+	./a.out test.cpp
