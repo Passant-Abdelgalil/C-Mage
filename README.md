@@ -8,5 +8,5 @@
 [ ]  type conversion
 [ ]  function call types mismatch
 [ ]  global scope
-[ ]  Enum declaration
+[ Done ]  Enum declaration
 [ ]  if condition "always <constant>"
