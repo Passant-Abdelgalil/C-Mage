@@ -25,12 +25,6 @@
         }
         return -1; // Value not found
     }
-    union NodeValue {
-        int i;
-        float f;
-        char* str;
-        bool b;
-    };
 
     typedef struct  {
         char *name;                         /* symbol name */
@@ -50,15 +44,23 @@
 
     int errorCount = 0;
     char **errors;
+    int warningCount = 0;
+    char **warnings;
+
+    bool errorCode = false;
+
 
     SymbolTable symbolTable;
     struct nodeType {
         valueDatatype type;
         char *value;
         bool is_const;
+        bool initialized;
     };
     void initSymbolTable(size_t initialSize);
     void printSymbolTable();
+    void printWarnings();
+    void printErrors();
 
     // Variables Functions
     bool handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
@@ -73,6 +75,7 @@
     void insertSymbol(SymbolTableEntryType symbol);
     int  getSymbolIdx(char* symbolName);
     void setUsed(char* identifier);
+    int checkInitialization(char* identifier);
     // Helper functions
 
     char *ltrim(char *s)
@@ -105,9 +108,9 @@
     struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2);
     struct nodeType* dupNode(struct nodeType* node);
     struct nodeType* getNode(char* identifier);
+    void initializationError(char * identifier);
 
-
-    char *stak[100];
+    char *stak[10000];
     int stakNext = 0;
 
     int regNext = 0;
@@ -132,7 +135,7 @@
     }
 
     void chk_overflow(int x) {
-      if (stakNext + x >= 100) {
+      if (stakNext + x >= 10000) {
         printf("ERROR: stack overflow\n");
         exit(1);
       }
@@ -206,10 +209,10 @@ braced_statements:                      '{' statement_list '}'  //{printf("brace
 statement:                              expression
 |                                       variable_declaration
 |                                       assignment  
-|                                       RETURN                       { /*rtn(); */}                                // {printf("empty return\n");}
-|                                       RETURN expression             { /* rtn();*/ }                          // {printf("return\n");}
-|                                       BREAK                        {/*brk();*/}                 // {printf("break\n");}
-|                                       CONTINUE                       {/*cnt();*/}                  // {printf("continue\n");}
+|                                       RETURN                              { /*rtn(); */}                              
+|                                       RETURN expression                   { /* rtn();*/ }                         
+|                                       BREAK                               {/*brk();*/}                 
+|                                       CONTINUE                            {/*cnt();*/}                 
 |                                       
 ;
 
@@ -226,8 +229,12 @@ variable_declaration:                   variable_type IDENTIFIER                
 }
 |                                       const_declaration_error
 {
-    yyerror("cannot declare constant without value");
-    yyerrok;
+    errors = realloc(errors, sizeof(char*) * (errorCount+1));
+    int errorMsgLen = strlen("Line %d: Can not declare constant without intialization") +
+                        snprintf(NULL, 0, "%d", yylineno) - 1;
+    errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+    sprintf(errors[errorCount], "Line %d: Can not declare constant without intialization", yylineno);
+    errorCount++;
 }
 ;
 
@@ -250,16 +257,16 @@ enum_list:                              enum_list ',' enum_state            {spr
 |                                       enum_state                          {$$ = $1;}
 ;
 
-const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); char str[30];sprintf(str, "%d", $1); push(str);}
-|                                       FLOAT_CONSTANT                      { $$ = floatNode($1); char str[30];sprintf(str, "%f", $1); push(str);}
-|                                       CHAR_CONSTANT                       { $$ = charNode($1); char str[3];sprintf(str, "%c", $1); push(str);}
+const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); char str[30]; sprintf(str, "%d", $1); push(str);}
+|                                       FLOAT_CONSTANT                      { $$ = floatNode($1); char str[30]; sprintf(str, "%f", $1); push(str);}
+|                                       CHAR_CONSTANT                       { $$ = charNode($1); char str[3]; sprintf(str, "%c", $1); push(str);}
 |                                       STRING_CONSTANT                     { $$ = stringNode($1); push($1); }
 |                                       TRUE_KEYWORD                        { $$ = boolNode($1); push("true");}
 |                                       FALSE_KEYWORD                       { $$ = boolNode($1); push("false");}
 ;
 
 
-expression:                             IDENTIFIER                              { $$ = getNode($1); push($1);}
+expression:                             IDENTIFIER                              { $$ = getNode($1); push($1); setUsed($1); initializationError($1);}
 |                                       const_expression                        { $$ = dupNode($1); }
 |                                       '(' expression ')'                      { $$ = dupNode($2); }
 |                                       expression '+' expression               { $$ = combineNode($1, $3); expr("+"); }
@@ -373,6 +380,8 @@ int main(int argc, char *argv[])
     printf("will parse\n");
     yyparse();
     printSymbolTable();
+    printErrors();
+    printWarnings();
 
     if (yywrap())
     {
@@ -382,7 +391,22 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void initializationError(char* identifier) {
+    warnings = realloc(warnings, sizeof(char*) * (warningCount+1));
+    int warningMsgLen = strlen("Line %d: Variable %s used before initialization") +
+                        strlen(identifier) +
+                        snprintf(NULL, 0, "%d", yylineno) - 1;
+    warnings[warningCount] = malloc(sizeof(char) * warningMsgLen);
+    sprintf(warnings[warningCount], "Line %d: Variable %s used before, initialization", yylineno, identifier);
+    warningCount++;
+}
 
+void setUsed(char* identifier)
+{
+    int symbolIdx =  getSymbolIdx(identifier);
+    if(symbolIdx == -1) return;
+    symbolTable.array[symbolIdx].is_used = true;
+}
 void push(char * name) {
   // printf("begin, push\n");
   chk_overflow(1);
@@ -457,6 +481,7 @@ struct nodeType* intNode(int value) {
     
 	p->type = Int;
     p->is_const = true;
+    p->initialized = true;
 
     int num_digits = snprintf(NULL, 0, "%d", value);
     // Allocate memory for the string based on the number of digits
@@ -471,6 +496,7 @@ struct nodeType* floatNode(float value) {
 
     p->type = Float;
     p->is_const = true;
+    p->initialized = true;
 
     int num_digits = snprintf(NULL, 0, "%f", value);
     // Allocate memory for the string based on the number of digits
@@ -482,39 +508,43 @@ struct nodeType* floatNode(float value) {
 }
 
 struct nodeType* boolNode(char* value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));;
+    struct nodeType* p = malloc(sizeof(struct nodeType));
     
     p->type = Bool;
     p->is_const = true;
+    p->initialized = true;
 
     p-> value = strcmp(value, "true") == 0? "1": "0";
     return p;
 }
  struct nodeType* charNode(char value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));;
+    struct nodeType* p = malloc(sizeof(struct nodeType));
     p->type = Char;
     p->is_const = true;
+    p->initialized = true;
+
     p->value = malloc(sizeof(char*)*1);
     sprintf(p->value, "%c", value);
     return p;
  }
 struct nodeType* stringNode(char* value) {
-    struct nodeType* p = malloc(sizeof(struct nodeType));;
-    
+    struct nodeType* p = malloc(sizeof(struct nodeType));    
     p->type = String;
     p->is_const = true;
+    p->initialized = true;
+
     p->value = strdup(value);
     return p;
 }
-
 
 struct nodeType* dupNode(struct nodeType* node){
     struct nodeType* p = malloc(sizeof(struct nodeType));
 
     p->is_const = node->is_const;
     p->value = node->value;
-    p->type = node->type;
+    p->initialized = node->initialized;
 
+    p->type = node->type;
     return p;
 }
 
@@ -523,7 +553,9 @@ struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
     struct nodeType* p = malloc(sizeof(struct nodeType));
 
     p->is_const = node1->is_const && node2->is_const;
+    p->initialized = node1->initialized && node2->initialized;
     p->type = node1->type;
+
     return p;
 }
 
@@ -544,20 +576,24 @@ bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
     int symbolIdx = getSymbolIdx(trim(strdup(identifier)));
     if(symbolIdx != -1) {
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Variable redeclaration, initially declared at %d") +
+        int errorMsgLen = strlen("Line %d: Variable redeclaration, %s initially declared at %d") +
                             snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
+                            strlen(identifier) +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno, symbolTable.array[symbolIdx].lineno);
+        sprintf(errors[errorCount], "Line %d: Variable redeclaration, %s initially declared at %d", 
+                                    yylineno, identifier, symbolTable.array[symbolIdx].lineno);
         errorCount++;
         return false;
     }
+    if(value == NULL) printf("value is null\n");
 
     if(is_const && (value != NULL && !(value->is_const))){
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
         int errorMsgLen = strlen("Line %d: Can not assign variable value to const") +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+        printf("lineno with variable to const is: %d\n", yylineno);
         sprintf(errors[errorCount], "Line %d: Can not assign variable value to const", yylineno);
         errorCount++;
         return false;
@@ -568,12 +604,31 @@ bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
     entry.name = trim(strdup(identifier));
     entry.type = is_const? CONSTANT : VARIABLE;
     entry.lineno = yylineno;
-    entry.initialized = (value != NULL);
     entry.is_const = is_const;
+    entry.is_used = false;
     entry.datatype = strdup(type);
-
+    if (value != NULL){
+        if(value->value != NULL){
+            int initialized = checkInitialization(value->value);
+            if (initialized != -1)
+                entry.initialized = initialized;
+            else
+                entry.initialized = (value->value != NULL);
+        }
+        else 
+            entry.initialized = true;
+    }
+    else 
+        entry.initialized = false;
+    
     insertSymbol(entry);
     return true;
+}
+
+int checkInitialization(char* identifier) {
+    int symbolIdx = getSymbolIdx(identifier);
+    if(symbolIdx != -1) return symbolTable.array[symbolIdx].initialized;
+    return -1;
 }
 
 void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType* node) {
@@ -737,61 +792,6 @@ char* getType(char* variable) {
     return strchr(variable, '.') == NULL ? "int" : "float";
 }
 
-char* checkTypes(char* op1, char* op2, char* op) {
-    printf("inside checkTypes: %s %s %s\n", op1, op2, op);
-
-    char* oper1, oper2;
-    char* type1 = getType(op1);
-    char* type2 = getType(op2);
-    bool stringOperation =  strcmp(type1, "string") == 0 ||
-                            strcmp(type2, "string") == 0 || 
-                            strcmp(type1, "char")   == 0 || 
-                            strcmp(type2, "char")   == 0;
-
-    /* + , - , * , / , % */
-    if(strcmp(op, "+") == 0 || strcmp(op, "-") == 0 ||
-        strcmp(op, "*") == 0 || strcmp(op, "/") == 0 || strcmp(op, "%") == 0) {
-        if(stringOperation) {
-            errors = realloc(errors, sizeof(char*) * (errorCount+1));
-            int errorMsgLen = strlen("Line %d: Mathematical operations can only be applied on numeric values") + snprintf(NULL, 0, "%d", yylineno) - 1; 
-            errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-            sprintf(errors[errorCount], "Line %d: Mathematical operations can only be applied on numeric values", yylineno);
-            errorCount++;
-            return "ERROR";
-        }
-        if(strcmp(type1, "float") == 0 || strcmp(type2, "float") == 0)
-            return "float";
-        else
-            return "int";
-    }
-
-    /* &&, ||, !,  */
-    if(strcmp(op, "&&") == 0 || strcmp(op, "||") == 0 || strcmp(op, "!") == 0){
-        if(stringOperation){
-            errors = realloc(errors, sizeof(char*) * (errorCount+1));
-            int errorMsgLen = strlen("Line %d: Logical operations can only be applied on numeric values") + snprintf(NULL, 0, "%d", yylineno) - 1; 
-            errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-            sprintf(errors[errorCount], "Line %d: Logical operations can only be applied on numeric values", yylineno);
-            errorCount++;
-            return "ERROR";
-        }
-        return "bool";
-
-    }
-    /* < , >, == , <= , >= , !=  */
-    if(strcmp(type1, type2) != 0){
-        errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Type mismatch, operation %s can not be from %s to %s") +
-                        strlen(type1) + strlen(type2) + snprintf(NULL, 0, "%d", yylineno) - 1;
-        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Type mismatch, operation %s can not be from %s to %s",
-                yylineno, op, type1, type2);
-        errorCount++;
-        return "ERROR";
-    }
-
-    return "bool";
-}
 
 int getSymbolIdx(char* symbolName) {
     for (int i=0; i < symbolTable.used; i++){
@@ -815,18 +815,49 @@ void insertSymbol(SymbolTableEntryType symbol) {
     /* printf("inserted\n"); */
 }
 
-void printSymbolTable() {
-    printf("\nName\tData Type\tType\tLine\tConst\tInitialized\n");
-    
-    for (int i=0; i < symbolTable.used; i++){
-        SymbolTableEntryType *symbolData = &(symbolTable.array[i]);
+void printErrors(){
+    FILE *fp = fopen("output/errors.txt", "w");
+    if(fp == NULL) {
+        printf("Error opening errors.txt file!\n");
+        exit(1);
+    }
 
-        printf("%s\t%s\t%s\t%d\t%s\t%s\n",
-            symbolData->name,
-            symbolData->datatype, 
-            types[symbolData->type],
-            symbolData->lineno,
-            symbolData->is_const ? "YES" : "NO", 
-            symbolData->initialized ? "YES": "NO");
+    for (int i = 0; i < errorCount; i++)
+        fprintf(fp, "%s\n", errors[i]);
+}
+
+void printWarnings(){
+    FILE *fp = fopen("output/warnings.txt", "w");
+    if(fp == NULL) {
+        printf("Error opening warnings.text file!\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < warningCount; i++)
+        fprintf(fp, "%s\n", warnings[i]);
+}
+
+void printSymbolTable() {
+     // write symbol table to file
+    FILE *fp = fopen("output/symbol_table.txt", "w");
+    if(fp == NULL) {
+        printf("Error opening symbol_table.txt file!\n");
+        exit(1);
+    }
+
+    fprintf(fp, "\nName\tData Type\tType\tLine\tConst\tInitialized\tUsed\n");
+
+    for(int i=0; i < symbolTable.used; i++) {
+        SymbolTableEntryType entry = symbolTable.array[i];
+
+        fprintf(fp, "%s\t%s\t%s\t%d\t%s\t%s\t%s\n", 
+            entry.name,
+            entry.datatype,
+            types[entry.type], 
+            entry.lineno,
+            entry.is_const? "YES" : "NO", 
+            entry.initialized? "YES" : "NO",
+            entry.is_used? "YES" : "NO"
+        ); 
     }
 }

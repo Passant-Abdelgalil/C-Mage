@@ -1,5 +1,5 @@
 int x;
-const int e = 10;
+const int e;
 const int w = e;
 const int z = 5 + 6;
 int y = (x);
