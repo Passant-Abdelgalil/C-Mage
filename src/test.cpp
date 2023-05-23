@@ -9,7 +9,7 @@ enum test {x,y};
 enum test {x=10,y};
 enum test {x=10,y=10};
 
-float r = 4+3 * 2 ;
+float r = 4 +3 * 2 ;
 int x = x + y + ( x + y);
 int x = x % y;
 bool z = x || y;

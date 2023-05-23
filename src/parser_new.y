@@ -12,19 +12,31 @@
     extern FILE *yyout;
     extern int yylineno;
 
+    void printSymbolTable();
+    void printWarnings();
+    void printErrors();
+
     typedef enum { KEYWORD, FUNCTION, VARIABLE, CONSTANT, ENUM } SymbolType;
     char* types [5] = {"KEYWORD", "FUNCTION", "VARIABLE", "CONSTANT", "ENUM"};
 
     typedef enum {Int, Float, String, Bool, Char} valueDatatype;
     char* datatypes [5] = {"int", "float", "string", "bool", "char"};
     int typeToEnum(char* value) {
+        printf("TYPE TO ENUM type is %s\n", value);
         for (int i = 0; i < 5; i++) {
             if (strcmp(datatypes[i], value) == 0) {
                 return i;
             }
         }
+        printSymbolTable();
         return -1; // Value not found
     }
+
+    typedef struct  {
+        char** parameterNames;
+        char** parameterTypes;
+        char* returnType;
+    }FunctionData;
 
     typedef struct  {
         char *name;                         /* symbol name */
@@ -32,8 +44,8 @@
         SymbolType type;               /* symbol type [function, variable, ...etc] */
         int lineno;                         /* line number where this symbol's declared */
         bool initialized, is_const, is_used;   /* flags to indicate the state of the symbol */
-        // int scope;
-        // int scopes[10];
+        
+        FunctionData functionData;
     } SymbolTableEntryType;
 
     typedef struct {
@@ -49,22 +61,24 @@
 
     bool errorCode = false;
 
-
     SymbolTable symbolTable;
+    
+
     struct nodeType {
         valueDatatype type;
         char *value;
         bool is_const;
         bool initialized;
     };
+
+
+    
     void initSymbolTable(size_t initialSize);
-    void printSymbolTable();
-    void printWarnings();
-    void printErrors();
+
 
     // Variables Functions
     bool handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
-
+    bool handleFunctionDeclaration(char* type, char* identifier, char* parameters);
     // Enums Functions
     void handleEnumDeclaration(char* identifier, char* enumValues);
     void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType *value);
@@ -158,7 +172,7 @@
 }
 
 
-%token<STRING> IDENTIFIER STRING_DECLARATION ENUM_DECLARATION CONST_DECLARATION BOOL_DECLARATION CHAR_DECLARATION FLOAT_DECLARATION INT_DECLARATION PRINT
+%token<STRING> VOID IDENTIFIER STRING_DECLARATION ENUM_DECLARATION CONST_DECLARATION BOOL_DECLARATION CHAR_DECLARATION FLOAT_DECLARATION INT_DECLARATION PRINT
 %token<INTEGER> INTEGER_CONSTANT
 %token<FLOAT> FLOAT_CONSTANT
 %token<CHAR>  CHAR_CONSTANT
@@ -167,7 +181,7 @@
 
 %token AND OR NOT EQ NE LT GT LE GE
 %token IF ELSE WHILE FOR DO SWITCH CASE DEFAULT BREAK CONTINUE
-%token RETURN VOID 
+%token RETURN  
 %token SINGLE_LINE_COMMENT 
 %nonassoc IFX
 %nonassoc ELSE
@@ -180,6 +194,9 @@
 %type <STRING> function_call
 %type <node_type> expression
 %type <node_type> const_expression
+%type <STRING> general_declaration
+%type <STRING> parameter_list
+%type <STRING> parameter
 /* %type <STRING> expression_error */
 
 
@@ -216,12 +233,15 @@ statement:                              expression
 |                                       
 ;
 
-variable_declaration:                   variable_type IDENTIFIER                                        { handleVariableDeclaration($1, $2, NULL, false); }
-|                                       variable_type IDENTIFIER '=' {push($2);} expression             { if(handleVariableDeclaration($1, $2, $5, false)) sto(); }
+general_declaration:                    variable_type IDENTIFIER                                                { handleVariableDeclaration($1, $2, NULL, false); sprintf($$, "%s:%s", $1, $2);}
+|                                       variable_type IDENTIFIER '=' {push($2);} expression                     { if(handleVariableDeclaration($1, $2, $5, false)) sto();  sprintf($$, "%s:%s", $1, $2);}
+|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression   { if(handleVariableDeclaration($2, $3, $6, true)) sto();  sprintf($$, "%s:%s", $1, $2);}
+;
+
+variable_declaration:                   general_declaration
 |                                       enum_definition
-|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression { if(handleVariableDeclaration($2, $3, $6, true)) sto();}
-|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER                { handleEnumVariableDeclaration($2, $3, NULL); }
-|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER {push($3);}'=' expression  { sto(); handleEnumVariableDeclaration($2, $3, $6);}
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER                                  { handleEnumVariableDeclaration($2, $3, NULL); }
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER {push($3);}'=' expression        { sto(); handleEnumVariableDeclaration($2, $3, $6);}
 |                                       variable_declaration_error
 {
     yyerror("missing identifier");
@@ -266,7 +286,7 @@ const_expression:                       INTEGER_CONSTANT                    { $$
 ;
 
 
-expression:                             IDENTIFIER                              { $$ = getNode($1); push($1); setUsed($1); initializationError($1);}
+expression:                             IDENTIFIER                              { $$ = getNode($1); push($1); setUsed($1);}
 |                                       const_expression                        { $$ = dupNode($1); }
 |                                       '(' expression ')'                      { $$ = dupNode($2); }
 |                                       expression '+' expression               { $$ = combineNode($1, $3); expr("+"); }
@@ -292,8 +312,8 @@ expression:                             IDENTIFIER                              
 } */
 ;
 
-function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
-|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/} '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
+function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
+|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
 ;
 
 function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; /*call_func($1);*/}
@@ -305,12 +325,12 @@ arguemnt_list:                          arguemnt_list ',' expression
 |                                    /* empty */
 ;
 
-parameter_list:                         parameter_list ',' parameter
-|                                       parameter
-|                                       /* empty */
+parameter_list:                         parameter_list ',' parameter                            { sprintf($$, "%s,%s", $1, $3); }
+|                                       parameter                                               { sprintf($$, "%s", $1); }
+|                                       /* empty */                                             { $$ = "";}
 ;
 
-parameter:                              variable_declaration
+parameter:                              general_declaration                                     { $$ = $1; }
 ;
 
 control_statement:                      if_statement            {/*pop the labels */ /*pop(2);*/}
@@ -320,11 +340,7 @@ control_statement:                      if_statement            {/*pop the label
 |                                       for_loop
 |                                       comments
 |                                       function_declaration
-
-
-/*missing_semicolon:                      expression error
 ;
-*/
 
 assignment:                             IDENTIFIER {push($1);} '=' expression {sto();}                       // {printf("assignment\n");}
 ;
@@ -401,6 +417,81 @@ void initializationError(char* identifier) {
     warningCount++;
 }
 
+bool handleFunctionDeclaration(char* type, char* identifier, char* parameters) {
+    printf("inside function declaration: %s %s (%s)\n", type, identifier, parameters);
+    
+    int symbolIdx = getSymbolIdx(identifier);
+    if(symbolIdx != -1 ){
+        errors = realloc(errors, sizeof(char*) * (errorCount+1));
+        int errorMsgLen = strlen("Line %d: Variable redeclaration, %s initially declared at %d") +
+                            snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
+                            strlen(identifier) +
+                            snprintf(NULL, 0, "%d", yylineno) - 1;
+        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+        sprintf(errors[errorCount], "Line %d: Variable redeclaration, %s initially declared at %d", 
+                                    yylineno, identifier, symbolTable.array[symbolIdx].lineno);
+        errorCount++;
+        return false;
+    }
+
+    FunctionData functionData;
+    functionData.returnType = strdup(type);
+    functionData.parameterNames = malloc(sizeof(char**));
+    functionData.parameterTypes = malloc(sizeof(char**));
+    
+    char *parameter;
+    int num_tokens = 0;
+    // Get the first parameter
+    parameter = strtok(parameters, ",");
+    // Iterate over the rest of the tokens
+    while (parameter != NULL) {
+        num_tokens++;
+        printf("inside while loop\n");
+
+        functionData.parameterNames = realloc(functionData.parameterNames, num_tokens * sizeof(char*)); // Resize the tokens array
+        functionData.parameterTypes = realloc(functionData.parameterTypes, num_tokens * sizeof(char*)); // Resize the tokens array
+        
+        char* token = strtok(parameter, ":");
+        char* parameterName;
+        char* parameterType;
+        if (token != NULL)
+            parameterType = strdup(token);
+        else{
+            printf("Something is wrong in function parameters %s\n", parameters);
+            break;
+        }
+        
+        token = strtok(parameter, ":");
+        if (token != NULL) 
+            parameterName = strdup(token);
+        else {
+            printf("Something is wrong in function parameters %s\n", parameters);
+            break;
+        }
+        
+        functionData.parameterTypes[num_tokens - 1] = malloc(strlen(parameterType) + 1); // Allocate memory for the token
+        functionData.parameterNames[num_tokens - 1] = malloc(strlen(parameterName) + 1); // Allocate memory for the token
+
+        parameter= strtok(NULL, ",");
+    }
+
+    /* insert the new variable in the symbol table */
+    SymbolTableEntryType entry;
+    entry.name = trim(strdup(identifier));
+    entry.type = FUNCTION;
+    entry.lineno = yylineno;
+
+    entry.is_const = true;
+    entry.is_used = false;
+    entry.initialized = true;
+
+    entry.datatype = strdup(type);
+    entry.functionData = functionData;
+
+    insertSymbol(entry);
+    return true;
+}
+
 void setUsed(char* identifier)
 {
     int symbolIdx =  getSymbolIdx(identifier);
@@ -471,6 +562,7 @@ struct nodeType* getNode(char* identifier) {
         p->type = typeToEnum(symbolTable.array[symbolIdx].datatype);
         p->value = strdup(identifier);
         p->is_const = symbolTable.array[symbolIdx].is_const;
+        p->initialized = symbolTable.array[symbolIdx].initialized;
     }
 
     return p;
@@ -551,6 +643,43 @@ struct nodeType* dupNode(struct nodeType* node){
 
 struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
     struct nodeType* p = malloc(sizeof(struct nodeType));
+    if(node1 == NULL) printf("node1 is null\n");
+    else              printf("node1 value is: %s and type is: %d\n", node1->value, node1->type);
+    if(node2 == NULL) printf("node2 is null\n");
+    else              printf("node2 value is: %s and type is: %d\n", node2->value, node2->type);
+    
+    // check if both nodes have the same type
+    // if not, output an error message
+    if(node1->type != node2->type) {
+        errors = realloc(errors, sizeof(char*) * (errorCount+1));
+        int errorMsgLen = strlen("Line %d: Can not combine different types") +
+                            snprintf(NULL, 0, "%d", yylineno) - 1;
+        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+        sprintf(errors[errorCount], "Line %d: Can not combine different types", yylineno);
+        errorCount++;
+        printf("first condition\n");
+        return NULL;
+    }
+
+    // check if both nodes have values ( both are initialized )
+    // if not, output an warning using Passant's initializationError(char* identifier) function
+    // check which of them is not initialized and output the warning
+    if (!node1->initialized && !node2->initialized) {
+        initializationError("");
+        printf("second condition\n");
+
+        return NULL;
+    }
+    else if (!node1->initialized) {
+        initializationError("");
+        printf("third condition\n");
+        return NULL;
+    }
+    else if (!node2->initialized) {
+        initializationError("");
+        printf("fourth condition\n");
+        return NULL;
+    }
 
     p->is_const = node1->is_const && node2->is_const;
     p->initialized = node1->initialized && node2->initialized;
@@ -598,6 +727,26 @@ bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
         errorCount++;
         return false;
     }
+
+    // check if we are assigning an uninitialized variable to another variable
+    // if uninitialized, print an warning
+    if(value != NULL && !value->initialized) {
+        initializationError("");
+        return false;
+    }
+
+    // check if we are assigning an incompatible type to a variable
+    // if incompatible, print an error
+    if(value != NULL && typeToEnum(type) != value->type) {
+        errors = realloc(errors, sizeof(char*) * (errorCount+1));
+        int errorMsgLen = strlen("Line %d: Can not assign variable value to const") +
+                            snprintf(NULL, 0, "%d", yylineno) - 1;
+        errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
+        sprintf(errors[errorCount], "Line %d: Can not assign variable value to const", yylineno);
+        errorCount++;
+        return false;
+    }
+
 
     /* insert the new variable in the symbol table */
     SymbolTableEntryType entry;
