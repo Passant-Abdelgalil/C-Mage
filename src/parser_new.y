@@ -37,7 +37,7 @@
         char *datatype;                     /* symbol data type [int, float, enum <name>, ...etc] */
         SymbolType type;               /* symbol type [function, variable, ...etc] */
         int lineno;                         /* line number where this symbol's declared */
-        bool initialized, is_const;   /* flags to indicate the state of the symbol */
+        bool initialized, is_const, is_used;   /* flags to indicate the state of the symbol */
         // int scope;
         // int scopes[10];
     } SymbolTableEntryType;
@@ -61,7 +61,7 @@
     void printSymbolTable();
 
     // Variables Functions
-    void handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
+    bool handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
 
     // Enums Functions
     void handleEnumDeclaration(char* identifier, char* enumValues);
@@ -72,7 +72,7 @@
     char* getType(char* variable);
     void insertSymbol(SymbolTableEntryType symbol);
     int  getSymbolIdx(char* symbolName);
-
+    void setUsed(char* identifier);
     // Helper functions
 
     char *ltrim(char *s)
@@ -100,18 +100,55 @@
     struct nodeType* floatNode(float value);
     struct nodeType* boolNode(char* value);
     struct nodeType* stringNode(char* value);
-    struct nodeType* charNode(char* value);
+    struct nodeType* charNode(char value);
 
     struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2);
     struct nodeType* dupNode(struct nodeType* node);
     struct nodeType* getNode(char* identifier);
+
+
+    char *stak[100];
+    int stakNext = 0;
+
+    int regNext = 0;
+    char *tempReg() {
+        char *temp = (char *) malloc(10);
+        sprintf(temp, "R%d", regNext++);
+        return temp;
+    }
+
+    int labelNext = 100;
+    char *label() {
+        char *temp = (char *) malloc(10);
+        sprintf(temp, "L%d", labelNext++);
+        return temp;
+    }
+
+    void chk_undeflow(int x) {
+      if (stakNext < x) {
+        printf("ERROR: stack underflow\n");
+        exit(1);
+      }
+    }
+
+    void chk_overflow(int x) {
+      if (stakNext + x >= 100) {
+        printf("ERROR: stack overflow\n");
+        exit(1);
+      }
+    }
+
+    void push(char *);
+    void sto();
+    void expr();
+
 %}
 
 %union {
     int INTEGER;
     float FLOAT;
     char *STRING;
-    char* CHAR;
+    char CHAR;
     char* BOOL;
 
     struct nodeType* node_type;
@@ -169,19 +206,19 @@ braced_statements:                      '{' statement_list '}'  //{printf("brace
 statement:                              expression
 |                                       variable_declaration
 |                                       assignment  
-|                                       RETURN                                           // {printf("empty return\n");}
-|                                       RETURN expression                               // {printf("return\n");}
-|                                       BREAK                                           // {printf("break\n");}
-|                                       CONTINUE                                        // {printf("continue\n");}
+|                                       RETURN                       { /*rtn(); */}                                // {printf("empty return\n");}
+|                                       RETURN expression             { /* rtn();*/ }                          // {printf("return\n");}
+|                                       BREAK                        {/*brk();*/}                 // {printf("break\n");}
+|                                       CONTINUE                       {/*cnt();*/}                  // {printf("continue\n");}
 |                                       
 ;
 
-variable_declaration:                   variable_type IDENTIFIER                            { handleVariableDeclaration($1, $2, NULL, false); }
-|                                       variable_type IDENTIFIER '=' expression             { handleVariableDeclaration($1, $2, $4, false); }
+variable_declaration:                   variable_type IDENTIFIER                                        { handleVariableDeclaration($1, $2, NULL, false); }
+|                                       variable_type IDENTIFIER '=' {push($2);} expression             { if(handleVariableDeclaration($1, $2, $5, false)) sto(); }
 |                                       enum_definition
-|                                       CONST_DECLARATION variable_type IDENTIFIER '=' expression { handleVariableDeclaration($2, $3, $5, true); }
+|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression { if(handleVariableDeclaration($2, $3, $6, true)) sto();}
 |                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER                { handleEnumVariableDeclaration($2, $3, NULL); }
-|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER '=' expression { handleEnumVariableDeclaration($2, $3, $5);}
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER {push($3);}'=' expression  { sto(); handleEnumVariableDeclaration($2, $3, $6);}
 |                                       variable_declaration_error
 {
     yyerror("missing identifier");
@@ -213,33 +250,33 @@ enum_list:                              enum_list ',' enum_state            {spr
 |                                       enum_state                          {$$ = $1;}
 ;
 
-const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); }
-|                                       FLOAT_CONSTANT                      { $$ = floatNode($1);}
-|                                       CHAR_CONSTANT                       { $$ = charNode($1); }
-|                                       STRING_CONSTANT                     { $$ = stringNode($1); }
-|                                       TRUE_KEYWORD                        { $$ = boolNode($1); }
-|                                       FALSE_KEYWORD                       { $$ = boolNode($1); }
+const_expression:                       INTEGER_CONSTANT                    { $$ = intNode($1); char str[30];sprintf(str, "%d", $1); push(str);}
+|                                       FLOAT_CONSTANT                      { $$ = floatNode($1); char str[30];sprintf(str, "%f", $1); push(str);}
+|                                       CHAR_CONSTANT                       { $$ = charNode($1); char str[3];sprintf(str, "%c", $1); push(str);}
+|                                       STRING_CONSTANT                     { $$ = stringNode($1); push($1); }
+|                                       TRUE_KEYWORD                        { $$ = boolNode($1); push("true");}
+|                                       FALSE_KEYWORD                       { $$ = boolNode($1); push("false");}
 ;
 
 
-expression:                             IDENTIFIER                              { $$ = getNode($1); }
+expression:                             IDENTIFIER                              { $$ = getNode($1); push($1);}
 |                                       const_expression                        { $$ = dupNode($1); }
 |                                       '(' expression ')'                      { $$ = dupNode($2); }
-|                                       expression '+' expression               { $$ = combineNode($1, $3); }
-|                                       expression '-' expression               { $$ = combineNode($1, $3); }
-|                                       expression '*' expression               { $$ = combineNode($1, $3); }
-|                                       expression '/' expression               { $$ = combineNode($1, $3); }
-|                                       expression '%' expression               { $$ = combineNode($1, $3); }
-|                                       expression EQ expression                { $$ = combineNode($1, $3); }
-|                                       expression NE expression                { $$ = combineNode($1, $3); }
-|                                       expression LT expression                { $$ = combineNode($1, $3); }
-|                                       expression GT expression                { $$ = combineNode($1, $3); }
-|                                       expression LE expression                { $$ = combineNode($1, $3); }
-|                                       expression GE expression                { $$ = combineNode($1, $3); }
-|                                       expression AND expression               { $$ = combineNode($1, $3); }
-|                                       expression OR expression                { $$ = combineNode($1, $3); }
-|                                       NOT expression                          { $$ = dupNode($2); }
-|                                       '-' expression %prec UMINUS             { $$ = dupNode($2); }
+|                                       expression '+' expression               { $$ = combineNode($1, $3); expr("+"); }
+|                                       expression '-' expression               { $$ = combineNode($1, $3); expr("-"); }
+|                                       expression '*' expression               { $$ = combineNode($1, $3); expr("*"); }
+|                                       expression '/' expression               { $$ = combineNode($1, $3); expr("/"); }
+|                                       expression '%' expression               { $$ = combineNode($1, $3); expr("%"); }
+|                                       expression EQ expression                { $$ = combineNode($1, $3); expr("=="); }
+|                                       expression NE expression                { $$ = combineNode($1, $3); expr("!="); }
+|                                       expression LT expression                { $$ = combineNode($1, $3); expr("<"); }
+|                                       expression GT expression                { $$ = combineNode($1, $3); expr(">");}
+|                                       expression LE expression                { $$ = combineNode($1, $3); expr("<=");}
+|                                       expression GE expression                { $$ = combineNode($1, $3); expr(">=");}
+|                                       expression AND expression               { $$ = combineNode($1, $3); expr("&&");}
+|                                       expression OR expression                { $$ = combineNode($1, $3); expr("||");}
+|                                       NOT expression                          { $$ = dupNode($2); expr("!");}
+|                                       '-' expression %prec UMINUS             { $$ = dupNode($2); expr("-");}
 |                                       function_call                           { $$ = getNode($1); }
 /* |                                       expression_error                    { $$ = $1; }
 {
@@ -248,12 +285,12 @@ expression:                             IDENTIFIER                              
 } */
 ;
 
-function_declaration:                   variable_type IDENTIFIER '(' parameter_list ')' braced_statements
-|                                       VOID IDENTIFIER '(' parameter_list ')' braced_statements
+function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
+|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/} '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/}
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; }
-|                                       PRINT '(' arguemnt_list ')'        { $$ = $1; }
+function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; /*call_func($1);*/}
+|                                       PRINT { /*call_rf_print();*/} '(' arguemnt_list ')'        { $$ = $1; }
 ;
 
 arguemnt_list:                          arguemnt_list ',' expression        
@@ -269,8 +306,8 @@ parameter_list:                         parameter_list ',' parameter
 parameter:                              variable_declaration
 ;
 
-control_statement:                      if_statement
-|                                       while_loop
+control_statement:                      if_statement            {/*pop the labels */ /*pop(2);*/}
+|                                       while_loop              {/*pop the labels */ /*pop(2);*/}
 |                                       do_while_loop
 |                                       switch_statement
 |                                       for_loop
@@ -282,7 +319,7 @@ control_statement:                      if_statement
 ;
 */
 
-assignment:                             IDENTIFIER '=' expression                       // {printf("assignment\n");}
+assignment:                             IDENTIFIER {push($1);} '=' expression {sto();}                       // {printf("assignment\n");}
 ;
 
 for_loop:                               FOR '(' variable_declaration ';' statement ';' assignment ')' braced_statements // {printf("for loop\n");}
@@ -345,6 +382,61 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void 
+
+void push(char * name) {
+  // printf("begin, push\n");
+  chk_overflow(1);
+  // push the value of yylval onto the stack
+  // printf("PUSH %s\n", name);
+  // push to stack
+  stak[stakNext++] = strdup(name);
+
+  // printf("PUHS\n");
+}
+
+void sto() {
+  // printf("STOOO\n");
+  chk_undeflow(2);
+  printf("STO %s, %s\n", stak[stakNext-1], stak[stakNext-2]);
+}
+
+void expr(char *op) {
+  // printf("begin expr\n");
+  chk_undeflow(2);
+
+  char *reg = tempReg();
+
+  // +
+    if (strcmp(op, "+") == 0) {
+        printf("ADD %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+        stakNext--;
+        strcpy(stak[stakNext-1], reg);
+    }
+    // -
+    else if (strcmp(op, "-") == 0) {
+        printf("SUB %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+        stakNext--;
+        strcpy(stak[stakNext-1], reg);
+    }
+    else if (strcmp(op, "*") == 0) {
+    printf("MUL %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+    stakNext--;
+    strcpy(stak[stakNext-1], reg);
+    }
+  // /
+    else if (strcmp(op, "/") == 0) {
+        printf("DIV %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+        stakNext--;
+        strcpy(stak[stakNext-1], reg);
+    }
+  // error
+  else {
+    printf("ERROR: unknown operator %s\n", op);
+    /* exit(1); */
+  }
+}
+
 struct nodeType* getNode(char* identifier) {
     struct nodeType* p = malloc(sizeof(struct nodeType));
 
@@ -399,12 +491,12 @@ struct nodeType* boolNode(char* value) {
     p-> value = strcmp(value, "true") == 0? "1": "0";
     return p;
 }
- struct nodeType* charNode(char* value) {
+ struct nodeType* charNode(char value) {
     struct nodeType* p = malloc(sizeof(struct nodeType));;
     p->type = Char;
     p->is_const = true;
     p->value = malloc(sizeof(char*)*1);
-    sprintf(p->value, "%c", value[1]);
+    sprintf(p->value, "%c", value);
     return p;
  }
 struct nodeType* stringNode(char* value) {
@@ -443,7 +535,7 @@ void initSymbolTable(size_t initialSize) {
     symbolTable.array = malloc(initialSize * sizeof(SymbolTableEntryType));
 }
 
-void handleVariableDeclaration(char* type, char* identifier, struct nodeType* value, bool is_const) {
+bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* value, bool is_const) {
     if(value != NULL)
         printf("inside handle variable with: %s %s = %s\n", type,  identifier, value->value);
     else
@@ -459,7 +551,7 @@ void handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
         sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno, symbolTable.array[symbolIdx].lineno);
         errorCount++;
-        return;
+        return false;
     }
 
     if(is_const && (value != NULL && !(value->is_const))){
@@ -469,7 +561,7 @@ void handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
         sprintf(errors[errorCount], "Line %d: Can not assign variable value to const", yylineno);
         errorCount++;
-        return;
+        return false;
     }
 
     /* insert the new variable in the symbol table */
@@ -482,6 +574,7 @@ void handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
     entry.datatype = strdup(type);
 
     insertSymbol(entry);
+    return true;
 }
 
 void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType* node) {
