@@ -1,28 +1,54 @@
 %{
     #include <stdlib.h>
-    #include <string.h>
     #include <stdio.h>
+    #include <string.h>
     #include <stdbool.h>
+    #include <errno.h>
+    #include <ctype.h>
 
-    void yyerror (const char* s);
-    int yywrap();
+    void yyerror (char* ); int yywrap();
     int yylex();
-
     extern FILE *yyin;
     extern FILE *yyout;
-    extern char * yytext;
     extern int yylineno;
-%}
 
+    char *stak[100];
+    int stakNext = 0;
 
-    // type functions
-    // struct nodeType* intNode(); 
-    // struct nodeType* floatNode();
-    // struct nodeType* boolNode();
-    // struct nodeType* stringNode();
+    int regNext = 0;
+    char *tempReg() {
+        char *temp = (char *) malloc(10);
+        sprintf(temp, "R%d", regNext++);
+        return temp;
+    }
 
-    typedef enum { KEYWORD, FUNCTION, VARIABLE, CONSTANT } SymbolType;
-    char* types [4] = {"KEYWORD", "FUNCTION", "VARIABLE", "CONSTANT"};
+    int labelNext = 100;
+    char *label() {
+        char *temp = (char *) malloc(10);
+        sprintf(temp, "L%d", labelNext++);
+        return temp;
+    }
+
+    void chk_undeflow(int x) {
+      if (stakNext < x) {
+        printf("ERROR: stack underflow\n");
+        exit(1);
+      }
+    }
+
+    void chk_overflow(int x) {
+      if (stakNext + x >= 100) {
+        printf("ERROR: stack overflow\n");
+        exit(1);
+      }
+    }
+
+    void push(char *);
+    void sto();
+    void expr();
+
+    typedef enum { KEYWORD, FUNCTION, VARIABLE, CONSTANT, ENUM } SymbolType;
+    char* types [5] = {"KEYWORD", "FUNCTION", "VARIABLE", "CONSTANT", "ENUM"};
 
     typedef struct  {
         char *name;                         /* symbol name */
@@ -30,6 +56,7 @@
         SymbolType type;               /* symbol type [function, variable, ...etc] */
         int lineno;                         /* line number where this symbol's declared */
         bool initialized, is_const;   /* flags to indicate the state of the symbol */
+        char* value;
         // int scope;
         // int scopes[10];
     } SymbolTableEntryType;
@@ -42,50 +69,65 @@
 
     SymbolTable symbolTable;
 
+    void initSymbolTable(size_t initialSize);
+    void printSymbolTable();
+
     void handleEnumDeclaration(char* identifier, char* enumValues);
     void insertSymbol(SymbolTableEntryType symbol);
 
+    // Helper functions
 
-    void initSymbolTable(SymbolTable *symbolTable, size_t initialSize);
-    void insertSymbol( bool initialized, bool is_const, SymbolType type);
-    void printSymbolTable(SymbolTable *symbolTable);
+    char *ltrim(char *s)
+    {
+        while(isspace(*s)) s++;
+        return s;
+    }
 
-    void updateLastSeenDatatype();
-    char *datatype;                            /* to hold the last seen data type */
-    // struct nodeType {
-    //     char *type;              /* type of node */
-    //     char *expr_type;
-    // };
-    
+    char *rtrim(char *s)
+    {
+        char* back = s + strlen(s);
+        while(isspace(*--back));
+        *(back+1) = '\0';
+        return s;
+    }
+
+    char *trim(char *s)
+    {
+        return rtrim(ltrim(s)); 
+    }
+
 %}
+
 %union {
+  // typedef struct nodeType {
+  //   
+  // }
     int INTEGER;
     char *STRING;
-    char *ID;
     float FLOAT;
     char CHAR;
-    int BOOL;
-    // struct nodeType* node_type;
+    char *BOOL;
 }
-%token<ID> IDENTIFIER
-%token<INTEGER> INT_DECLARATION
-%token<FLOAT> FLOAT_DECLARATION
-%token<CHAR> CHAR_DECLARATION 
-%token<STRING> STRING_DECLARATION
-%token<BOOL> BOOL_DECLARATION
-%token ENUM_DECLARATION
-%token CONST_DECLARATION
+%token<STRING> IDENTIFIER STRING_DECLARATION ENUM_DECLARATION CONST_DECLARATION BOOL_DECLARATION CHAR_DECLARATION FLOAT_DECLARATION INT_DECLARATION
+%token<INTEGER> INTEGER_CONSTANT
+%token<FLOAT> FLOAT_CONSTANT
+%token<CHAR>  CHAR_CONSTANT
+%token<BOOL> TRUE_KEYWORD FALSE_KEYWORD
+%token<STRING> STRING_CONSTANT
+
 %token AND OR NOT EQ NE LT GT LE GE
 %token IF ELSE WHILE FOR DO SWITCH CASE DEFAULT BREAK CONTINUE
 %token RETURN VOID PRINT
-%token INTEGER_CONSTANT FLOAT_CONSTANT CHAR_CONSTANT STRING_CONSTANT
-%token TRUE_KEYWORD FALSE_KEYWORD
 %token SINGLE_LINE_COMMENT 
 %nonassoc IFX
 %nonassoc ELSE
 %nonassoc UMINUS
 
-/* %type <node_type>  */
+%type <STRING> enum_list
+%type <STRING> enum_state
+%type <STRING> enum_definition
+/* %type <STRING> enum_opt_value */
+
 
 %right '='
 %left  OR
@@ -97,188 +139,150 @@
 %right NOT
 
 %%
-program:                                statement_list                    // {printf("program\n");}
+statement_list:                         statement ';'
+|                                       statement_list statement ';'
+|                                       control_statement
+|                                       statement_list control_statement
+|                                       braced_statements
+|                                       statement_list braced_statements
+|                                       statement error {yyerrok;}
 ;
 
-// declaration_list:                       declaration_list declaration            // {printf("declaration_list\n");}
-// |                                       declaration                             // {printf("declaration_list\n");}
-// ;
-
-declaration:                            variable_declaration ';'          // {printf("variable declaration\n");}
-|                                       function_declaration 
-
-
-variable_type:                          INT_DECLARATION                     { printf("var type\n"); updateLastSeenDatatype(); }       
-|                                       FLOAT_DECLARATION                   { printf("var type\n"); updateLastSeenDatatype(); }
-|                                       CHAR_DECLARATION                    { printf("var type\n"); updateLastSeenDatatype(); }
-/*|                                       CONST_DECLARATION */
-|                                       BOOL_DECLARATION                    { printf("var type\n");updateLastSeenDatatype(); }
-|                                       STRING_DECLARATION                  { printf("var type\n");updateLastSeenDatatype(); }
+braced_statements:                      '{' statement_list '}'  //{printf("braced statements\n");}
 ;
 
-/* a function can have the additional type void as well as the other types */
-/* problem here */
-/* proposed solution 1: add void to the function definition and remove this rule*/
-// function_type:                          variable_type
-// |                                       VOID
-// ;
+statement:                              expression
+|                                       variable_declaration
+|                                       assignment
+|                                       RETURN                 {rtn();}
+|                                       RETURN expression      {rtn();}
+|                                       BREAK                  {brk();}
+|                                       CONTINUE               {cnt();}
+|
+;
 
-variable_declaration:                   variable_type IDENTIFIER
-|                                       variable_type IDENTIFIER '=' expression
+variable_declaration:                   variable_type IDENTIFIER 
+|                                       variable_type IDENTIFIER {push($2);} '=' expression {sto();}
 |                                       enum_definition
-|                                       CONST_DECLARATION variable_type IDENTIFIER '=' expression
-|                                       variable_declaration_error
-{
-    yyerror("missing identifier");
-    yyerrok;
-}
-|                                       const_declaration_error
-{
-    yyerror("cannot declare constant without value");
-    yyerrok;
-}
+|                                       CONST_DECLARATION variable_type IDENTIFIER {push($3);} '=' expression {sto();}
+|                                       ENUM_DECLARATION IDENTIFIER IDENTIFIER 
+|                                       ENUM_DECLARATION IDENTIFIER assignment
+// |                                    variable_declaration_error { yyerror("missing identifier"); yyerrok; }
+// |                                    const_declaration_error { yyerror("cannot declare constant without value"); yyerrok; }
 ;
 
-enum_definition:                        ENUM_DECLARATION  IDENTIFIER '{' enum_list '}' {handleEnumDeclaration($2, $3)}
+variable_type:                          INT_DECLARATION
+|                                       FLOAT_DECLARATION
+|                                       CHAR_DECLARATION
+/*|                                       CONST_DECLARATION */
+|                                       BOOL_DECLARATION
+|                                       STRING_DECLARATION
 ;
 
-enum_list:                              IDENTIFIER enum_opt_value ',' enum_list 
-|                                       IDENTIFIER enum_opt_value
+enum_definition:                        ENUM_DECLARATION IDENTIFIER '{' enum_list '}' { handleEnumDeclaration($2, $4); }
 ;
 
-enum_opt_value:                         '=' INTEGER_CONSTANT
-|                                       /* empty */
+enum_state:                             IDENTIFIER '=' INTEGER_CONSTANT     { sprintf($$, "%s=%d", $1, $3); }
+|                                       IDENTIFIER                          { sprintf($$, "%s", $1); }
 ;
 
-expression:                             IDENTIFIER                            // {printf("identifier expression\n");}
-|                                       INTEGER_CONSTANT
-|                                       FLOAT_CONSTANT
-|                                       CHAR_CONSTANT                        // {printf("char constant expression\n");}
-|                                       STRING_CONSTANT                      // {printf("string constant expression\n");}
-|                                       TRUE_KEYWORD                         
-|                                       FALSE_KEYWORD
+enum_list:                              enum_list ',' enum_state  {sprintf($$, "%s,%s", $1, $3); }  
+|                                       enum_state          {$$ = $1;}
+;
+
+
+expression:                             IDENTIFIER       {push($1);}
+|                                       INTEGER_CONSTANT {char str[30];sprintf(str, "%d", $1); push(str);}
+|                                       FLOAT_CONSTANT   {char str[30];sprintf(str, "%f", $1); push(str);}
+|                                       CHAR_CONSTANT    {char str[3];sprintf(str, "%c", $1); push(str);}
+|                                       STRING_CONSTANT  {push($1);}
+|                                       TRUE_KEYWORD     {push("true");}
+|                                       FALSE_KEYWORD    {push("false");}
 |                                       '(' expression ')'
-|                                       expression '+' expression
-|                                       expression '-' expression
-|                                       expression '*' expression
-|                                       expression '/' expression
-|                                       expression '%' expression
-|                                       expression EQ expression
-|                                       expression NE expression
-|                                       expression LT expression
-|                                       expression GT expression
-|                                       expression LE expression
-|                                       expression GE expression
-|                                       expression AND expression
-|                                       expression OR expression
-|                                       NOT expression
-|                                       '-' expression %prec UMINUS
+|                                       expression '+' expression   {expr("+");}
+|                                       expression '-' expression   {expr("-");}
+|                                       expression '*' expression   {expr("*");}
+|                                       expression '/' expression   {expr("/");}
+|                                       expression '%' expression   {expr("%");}
+|                                       expression EQ expression    {expr("==");}
+|                                       expression NE expression    {expr("!=");}
+|                                       expression LT expression    {expr("<");}
+|                                       expression GT expression    {expr(">");}
+|                                       expression LE expression    {expr("<=");}
+|                                       expression GE expression    {expr(">=");}
+|                                       expression AND expression   {expr("&&");}
+|                                       expression OR expression    {expr("||");}
+|                                       NOT expression              {expr1("!");}
+|                                       '-' expression %prec UMINUS {expr1("-");}
 |                                       function_call
-|                                       expression_error
-{
-    yyerror("missing operand");
-    yyerrok;
-}
+// |                                    expression_error { yyerror("missing operand"); yyerrok; }
 ;
 
-function_declaration:                   variable_type IDENTIFIER {printf("function1\n"); insertSymbol( false, false, FUNCTION); } '(' parameter_list ')' block
-|                                       VOID IDENTIFIER {printf("function\n"); insertSymbol( false, false, FUNCTION); } '(' parameter_list ')' block
+function_declaration:                   variable_type IDENTIFIER {decl_func_s($2);} '(' parameter_list ')' braced_statements {decl_func_e($2);}
+|                                       VOID          IDENTIFIER {decl_func_s($2);} '(' parameter_list ')' braced_statements {decl_func_e($2);}
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'                // {printf("function call\n");}
-|                                       reserved_functions '(' arguemnt_list ')'        // {printf("print call\n");}
+function_call:                          IDENTIFIER         '(' arguemnt_list ')' {call_func($1);}
+|                                       reserved_functions '(' arguemnt_list ')'
 ;
 
 /*reserved functions rule */
-reserved_functions:                     PRINT                                           {printf("print\n"); insertSymbol( false, false, KEYWORD); }
+reserved_functions:                     PRINT    {call_rf_print();}
 /* | cout and whatnot*/
 ; 
 
-arguemnt_list:                          arguemnt_list ',' expression        
+arguemnt_list:                          arguemnt_list ',' expression
 |                                       expression
-|                                    /* empty */
+|
 ;
 
 parameter_list:                         parameter_list ',' parameter
 |                                       parameter
-|                                       /* empty */
+|
 ;
 
 parameter:                              variable_declaration
 ;
 
-block:                                  '{' statement_list '}'                 // {printf("block\n");}
-;
-
-statement_list:                         statement statement_list
-|                                      /* empty */
-;
-
-statement:                              expression ';'
-|                                       declaration
-/*|                                       function_call ';'*/
-|                                       for_loop
-|                                       assignment
-|                                       if_statement
-|                                       while_loop
+control_statement:                      if_statement            {/*pop the labels */ pop(2);}
+|                                       while_loopnt            {/*pop the labels */ pop(2);}
 |                                       do_while_loop
-|                                       block
-|                                       RETURN ';'                                          // {printf("empty return\n");}
-|                                       RETURN expression ';'                               // {printf("return\n");}
-|                                       BREAK ';'                                           // {printf("break\n");}
-|                                       CONTINUE ';'                                        // {printf("continue\n");}
 |                                       switch_statement
+|                                       for_loop
 |                                       comments
+|                                       function_declaration
 
-/*|                                       if while for ... */
+
+/*missing_semicolon:                      expression error
+;
+*/
+
+assignment:                             IDENTIFIER {push($1);} '=' expression {sto();}                      // {printf("assignment\n");}
 ;
 
-assignment:                             IDENTIFIER '=' expression ';'                       // {printf("assignment\n");}
-/*|                                       IDENTIFIER '=' function_call ';'                     // {printf("function assignment\n");}*/
+for_loop:                               FOR '(' variable_declaration ';' statement ';' assignment ')' braced_statements // {printf("for loop\n");}
 ;
 
-for_loop:                               FOR '(' for_init ';' for_condition ';' for_update ')' block // {printf("for loop\n");}
+if_statement:                           IF '(' expression ')' braced_statements %prec IFX               // {printf("if statement\n");}
+|                                       IF '(' expression ')' braced_statements ELSE braced_statements              // {printf("if statement with else\n");}
+|                                       IF '(' expression ')' braced_statements ELSE if_statement       // {printf("if statement with else if\n");}
 ;
 
-for_init:                               variable_declaration
-|                                       assignment
-|                                       /* empty */
+while_loop:                             WHILE '(' expression ')' braced_statements                      // {printf("while loop\n");}
 ;
 
-for_condition:                          expression
-|                                       /* empty */
+do_while_loop:                          DO braced_statements WHILE '(' expression ')' ';'              // {printf("do while loop\n");}
 ;
 
-for_update:                             assignment
-|                                       /* empty */
-;
-
-
-else_statement:                         ELSE statement
-|                                       /* empty */
-;
-
-
-if_statement:                           IF '(' expression ')' block %prec IFX               // {printf("if statement\n");}
-|                                       IF '(' expression ')' block ELSE block              // {printf("if statement with else\n");}
-|                                       IF '(' expression ')' block ELSE if_statement       // {printf("if statement with else if\n");}
-;
-
-while_loop:                             WHILE '(' expression ')' block                      // {printf("while loop\n");}
-;
-
-do_while_loop:                          DO block WHILE '(' expression ')' ';'              // {printf("do while loop\n");}
-;
-
-switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'         // {printf("switch statement\n");}
+switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'          //{printf("switch statement\n");}
 ;
 
 case_list:                              case_list case
 |                                       case
 ;
 
-case:                                   CASE {printf("case\n"); insertSymbol( false, false, KEYWORD); } expression ':' statement_list 
-|                                       DEFAULT  { printf("case default\n"); insertSymbol(false, false, KEYWORD); }':' statement_list
+case:                                   CASE expression ':' statement_list 
+|                                       DEFAULT ':' statement_list
 ;
 
 comments:                               SINGLE_LINE_COMMENT                            // {printf("single line comment\n");}
@@ -287,8 +291,8 @@ comments:                               SINGLE_LINE_COMMENT                     
 expression_error:                       expression '+'
 ;
 
-variable_declaration_error:             variable_type 
-|                                       variable_type IDENTIFIER '=' 
+variable_declaration_error:             variable_type
+|                                       variable_type IDENTIFIER '='
 ;
 
 const_declaration_error:                CONST_DECLARATION variable_type IDENTIFIER 
@@ -303,20 +307,36 @@ void yyerror(char *s) {
 int main(int argc, char *argv[])
 {
     yyin = fopen(argv[1], "r");
-    initSymbolTable(&symbolTable, 1000);
-
+    printf("in main\n");
+    initSymbolTable(1000);
+    printf("symbol table created\n");
     yyparse();
     printf("parsed\n");
-    
-    printSymbolTable(&symbolTable);
+    printSymbolTable();
 
-    if (yywrap()) printf("Parsing successful ya regala!\n");
-    
+    if (yywrap())
+    {
+        printf("\nParsing successful ya regala!\n");
+    }
     fclose(yyin); 
     return 0;
 }
 
+/* Initialize the dynamic symbol table */
+void initSymbolTable(size_t initialSize) {
+    symbolTable.used = 0;
+    symbolTable.size = initialSize;
+    symbolTable.array = malloc(initialSize * sizeof(SymbolTableEntryType));
+}
+
+
 void handleEnumDeclaration(char* identifier, char* enumValues){
+    if (identifier == NULL || enumValues == NULL){
+        printf("null values\n");
+        return;
+    }
+    printf("in handle enum\n");
+    printf("%s %s\n", identifier, enumValues);
     char *token;
     char **tokens = NULL; // Declare the tokens array as a pointer to pointers
     int num_tokens = 0;
@@ -330,8 +350,9 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
         tokens = realloc(tokens, num_tokens * sizeof(char*)); // Resize the tokens array
         tokens[num_tokens - 1] = malloc(strlen(token) + 1); // Allocate memory for the token
         strcpy(tokens[num_tokens - 1], token); // Copy the token into the array
-        token = strtok(NULL, ",");
+        token= strtok(NULL, ",");
     }
+
     /* This variable will hold the value that should be set to the enum variables */
     int varValue = -1;
     char* varName;
@@ -345,7 +366,7 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
             varValue = varValue + 1;
             varName = tokens[i];
         }
-        else{
+        else {
             // Allocate memory for the key and value substrings
             varName = malloc(eq - tokens[i] + 1);
             value = malloc(strlen(eq + 1) + 1);
@@ -359,7 +380,7 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
             int num = strtol(value, &endptr, 10);
 
             // Check for errors
-            if (errno == ERANGE || endptr == str || *endptr != '\0') {
+            if (errno == ERANGE || endptr == value || *endptr != '\0') {
                 printf("Error: Invalid integer\n");
                 return;
                 /* TODO: handle this error because enums can only hold integer values in our language */
@@ -367,26 +388,43 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
                 varValue = num;
             }
         }
+        
         SymbolTableEntryType entry;
-        entry.name = varName;
+        entry.name = trim(strdup(varName));
         entry.type = CONSTANT;
-        entry.value = varValue;
         entry.lineno = yylineno;
         entry.initialized = true;
         entry.is_const = true;
-
+        /* Set the variable datatype to be 'enum <vairable name>' */
         char type[] = "enum %s";
-        int datatype_length = strlen(type) + strlen(varName) - 1;
+        int datatype_length = strlen(type) + strlen(identifier) - 1;
         entry.datatype = malloc(datatype_length * sizeof(char));
-        sprintf(entry.datatype, type, varName);
-        
+        sprintf(entry.datatype, type, identifier);
+        /* Set the variable value to its string representation */        
+        // Calculate the number of digits in the number
+        int num_digits = snprintf(NULL, 0, "%d", varValue);
+        // Allocate memory for the string based on the number of digits
+        entry.value = (char *) malloc(num_digits + 1);
+        // Call sprintf to convert the number to a string
+        sprintf(entry.value, "%d", varValue);
+
+        /* insert the symbol in the table */
         insertSymbol(entry);
 
         // Free the memory allocated for the substrings
-        free(varName);
-        free(value);
+        if(eq != NULL)
+            free(varName);
     }
 
+    SymbolTableEntryType entry;
+    entry.name = trim(strdup(identifier));
+    entry.type = ENUM;
+    entry.lineno = yylineno;
+    entry.initialized = true;
+    entry.is_const = true;
+    entry.datatype = "enum";
+
+    insertSymbol(entry);
     // Free the memory allocated for the tokens
     for (int i = 0; i < num_tokens; i++) {
         free(tokens[i]);
@@ -395,12 +433,11 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
 }
 
 void insertSymbol(SymbolTableEntryType symbol) {
-
-    for (int i=0; i < symbolTable->used; i++){
-        SymbolTableEntryType *symbolData = &(symbolTable->array[i]);
-
-        if (strcmp(symbol.name, symbolData->name) == 0) {
+    /*  check if this symbol already exists */
+    for (int i=0; i < symbolTable.used; i++){
+        if (strcmp(symbol.name, symbolTable.array[i].name) == 0) {
             /* ERROR: symbol already exists */
+            printf("symbol %s already exists\n", symbol.name);
             return;
         }
     }
@@ -413,68 +450,20 @@ void insertSymbol(SymbolTableEntryType symbol) {
         /* reallocate the array with the new size keeping the old data */
         symbolTable.array = realloc(symbolTable.array, symbolTable.size * sizeof(SymbolTableEntryType));
     }
-
-    symbolTable.array[symbolTable.used++] = symbolData;
+    printf("will insert symbol %s\n", symbol.name);
+    symbolTable.array[symbolTable.used++] = symbol;
     printf("inserted\n");
 }
 
-/* Initialize the dynamic symbol table */
-void initSymbolTable(SymbolTable *symbolTable, size_t initialSize) {
-    symbolTable->array = malloc(initialSize * sizeof(SymbolTableEntryType));
-    symbolTable->used = 0;
-    symbolTable->size = initialSize;
-}
-
-void insertSymbol(bool initialized, bool is_const, SymbolType type) {
-    printf("calling insertSymbol\n");
-    /* check if the symbol table is full */
-    if(symbolTable.used == symbolTable.size) {
-        printf("doubling symbol table size\n");
-        /* double the symbol table array size */
-        symbolTable.size *= 2;
-        /* reallocate the array with the new size keeping the old data */
-        symbolTable.array = realloc(symbolTable.array, symbolTable.size * sizeof(SymbolTableEntryType));
-    }
-
-    /* TODO: check if this symbol already exists and throw error */
+void printSymbolTable() {
+    printf("\nName\tData Type\tType\tLine\tConst\tInitialized \n");
     
-    /* insert the symbol entry in the table */
-    SymbolTableEntryType symbolData;
+    for (int i=0; i < symbolTable.used; i++){
+        SymbolTableEntryType *symbolData = &(symbolTable.array[i]);
 
-    symbolData.initialized = initialized;
-    symbolData.is_const = is_const;
-    symbolData.type = type;
-    symbolData.lineno = yylineno;
-    printf("yytext is: %s\n", yytext);
-    if (symbolData.type != VARIABLE && symbolData.type != FUNCTION) {
-        printf("not variable \n");
-        /* yytext points at the first char in the token
-            we pass it to strdup to create a copy of this
-            string and store it as the symbol name
-        */
-        symbolData.name = strdup(yytext);
-        symbolData.datatype = strdup("N/A");
-    }
-    else {
-        symbolData.name = strdup(yylval.ID);
-        symbolData.datatype = datatype;
-    }
-    printf("symbol name: %s\n",symbolData.name);
-
-    symbolTable.array[symbolTable.used++] = symbolData;
-    printf("inserted\n");
-}
-
-void printSymbolTable(SymbolTable *symbolTable) {
-    printf("\nName\tData Type\tScope\tType\tLine\tConst\tInitialized \n");
-    
-    for (int i=0; i < symbolTable->used; i++){
-        SymbolTableEntryType *symbolData = &(symbolTable->array[i]);
-
-        printf("%s\t%s\t%d\t%s\t%d\t%s\t%s\n",
+        printf("%s\t%s\t%s\t%d\t%s\t%s\n",
             symbolData->name,
             symbolData->datatype, 
-            symbolData->scope, 
             types[symbolData->type],
             symbolData->lineno,
             symbolData->is_const ? "YES" : "NO", 
@@ -482,11 +471,50 @@ void printSymbolTable(SymbolTable *symbolTable) {
     }
 }
 
-void updateLastSeenDatatype() {
-    datatype = strdup(yytext);
-    printf("last seen datatype : %s\n", datatype);
+void push(char * name) {
+  // printf("begin, push\n");
+  chk_overflow(1);
+  // push the value of yylval onto the stack
+  // printf("PUSH %s\n", name);
+  // push to stack
+  stak[stakNext++] = strdup(name);
+
+  // printf("PUHS\n");
 }
 
-//------------------------------------------------------------------------------- 
-// Type checking functions 
-//-------------------------------------------------------------------------------  
+void sto() {
+  // printf("STOOO\n");
+  chk_undeflow(2);
+  printf("STO %s, %s\n", stak[stakNext-1], stak[stakNext-2]);
+}
+
+void expr(char *op) {
+  // printf("begin expr\n");
+  chk_undeflow(2);
+
+  char *reg = tempReg();
+
+  // +
+  if (strcmp(op, "+") == 0) {
+    printf("ADD %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+    stakNext--;
+    strcpy(stak[stakNext-1], reg);
+  }
+  // -
+  else if (strcmp(op, "-") == 0) {
+    printf("SUB %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+    stakNext--;
+    strcpy(stak[stakNext-1], reg);
+  }
+  // /
+  else if (strcmp(op, "/") == 0) {
+    printf("DIV %s, %s, %s\n", stak[stakNext-2], stak[stakNext-1], reg);
+    stakNext--;
+    strcpy(stak[stakNext-1], reg);
+  }
+  // error
+  else {
+    printf("ERROR: unknown operator %s\n", op);
+    exit(1);
+  }
+}
