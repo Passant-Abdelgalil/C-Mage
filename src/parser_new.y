@@ -38,20 +38,24 @@
         SymbolType type;               /* symbol type [function, variable, ...etc] */
         int lineno;                         /* line number where this symbol's declared */
         bool initialized, is_const, is_used;   /* flags to indicate the state of the symbol */
-        // int scope;
-        // int scopes[10];
     } SymbolTableEntryType;
 
     typedef struct {
         SymbolTableEntryType *array;
         size_t used;
         size_t size;
+        // handle scope by using a doubly linked list
+        struct SymbolTable *next;
+        struct SymbolTable *prev;
     } SymbolTable;
+
+    int currentScope = 0;
+
+    SymbolTable *symbolTableHead;
 
     int errorCount = 0;
     char **errors;
 
-    SymbolTable symbolTable;
     struct nodeType {
         valueDatatype type;
         char *value;
@@ -66,7 +70,6 @@
     // Enums Functions
     void handleEnumDeclaration(char* identifier, char* enumValues);
     void handleEnumVariableDeclaration(char* enumName, char* identifier, struct nodeType *value);
-
 
     char* checkTypes(char* op1, char* op2, char* op);
     char* getType(char* variable);
@@ -444,9 +447,9 @@ struct nodeType* getNode(char* identifier) {
         /* doesn't exist, handle later */
     }
     else {
-        p->type = typeToEnum(symbolTable.array[symbolIdx].datatype);
+        p->type = typeToEnum(symbolTableHead->array[symbolIdx].datatype);
         p->value = strdup(identifier);
-        p->is_const = symbolTable.array[symbolIdx].is_const;
+        p->is_const = symbolTableHead->array[symbolIdx].is_const;
     }
 
     return p;
@@ -529,9 +532,14 @@ struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
 
 /* Initialize the dynamic symbol table */
 void initSymbolTable(size_t initialSize) {
-    symbolTable.used = 0;
-    symbolTable.size = initialSize;
-    symbolTable.array = malloc(initialSize * sizeof(SymbolTableEntryType));
+    printf("start: init symbol table\n");
+    symbolTableHead = malloc(sizeof(SymbolTable));
+    symbolTableHead->used = 0;
+    symbolTableHead->size = initialSize;
+    symbolTableHead->array = malloc(initialSize * sizeof(SymbolTableEntryType));
+    symbolTableHead->next = NULL;
+    symbolTableHead->prev = NULL;
+    printf("end: init symbol table\n");
 }
 
 bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* value, bool is_const) {
@@ -545,10 +553,10 @@ bool handleVariableDeclaration(char* type, char* identifier, struct nodeType* va
     if(symbolIdx != -1) {
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
         int errorMsgLen = strlen("Line %d: Variable redeclaration, initially declared at %d") +
-                            snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
+                            snprintf(NULL, 0, "%d", symbolTableHead->array[symbolIdx].lineno) +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno, symbolTable.array[symbolIdx].lineno);
+        sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno, symbolTableHead->array[symbolIdx].lineno);
         errorCount++;
         return false;
     }
@@ -676,10 +684,10 @@ void handleEnumDeclaration(char* identifier, char* enumValues){
         if(symbolIdx != -1) {
             errors = realloc(errors, sizeof(char*) * (errorCount+1));
             int errorMsgLen = strlen("Line %d: Variable redeclaration, initially declared at %d") +
-                            snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
+                            snprintf(NULL, 0, "%d", symbolTableHead->array[symbolIdx].lineno) +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
             errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-            sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno,  symbolTable.array[symbolIdx].lineno);
+            sprintf(errors[errorCount], "Line %d: Variable redeclaration, initially declared at %d", yylineno,  symbolTableHead->array[symbolIdx].lineno);
             errorCount++;
             if(eq != NULL)
                 free(varName);
@@ -730,7 +738,7 @@ char* getType(char* variable) {
         /* check if it's a vairbla */
         int symbolIdx =  getSymbolIdx(variable);
         if(symbolIdx != -1)
-            return strstr(symbolTable.array[symbolIdx].datatype, "enum") != NULL ? "int" : symbolTable.array[symbolIdx].datatype;
+            return strstr(symbolTableHead->array[symbolIdx].datatype, "enum") != NULL ? "int" : symbolTableHead->array[symbolIdx].datatype;
         else
             return variable[0] == '"'? "string" : "ERROR";
     }
@@ -794,8 +802,8 @@ char* checkTypes(char* op1, char* op2, char* op) {
 }
 
 int getSymbolIdx(char* symbolName) {
-    for (int i=0; i < symbolTable.used; i++){
-        if (strcmp(symbolName, symbolTable.array[i].name) == 0)
+    for (int i=0; i < symbolTableHead->used; i++){
+        if (strcmp(symbolName, symbolTableHead->array[i].name) == 0)
             return i;
     }
     return -1;
@@ -803,23 +811,23 @@ int getSymbolIdx(char* symbolName) {
 
 void insertSymbol(SymbolTableEntryType symbol) {
     /* check if the symbol table is full */
-    if(symbolTable.used == symbolTable.size) {
+    if(symbolTableHead->used == symbolTableHead->size) {
         /* printf("doubling symbol table size\n"); */
         /* double the symbol table array size */
-        symbolTable.size *= 2;
+        symbolTableHead->size *= 2;
         /* reallocate the array with the new size keeping the old data */
-        symbolTable.array = realloc(symbolTable.array, symbolTable.size * sizeof(SymbolTableEntryType));
+        symbolTableHead->array = realloc(symbolTableHead->array, symbolTableHead->size * sizeof(SymbolTableEntryType));
     }
     /* printf("will insert symbol %s\n", symbol.name); */
-    symbolTable.array[symbolTable.used++] = symbol;
+    symbolTableHead->array[symbolTableHead->used++] = symbol;
     /* printf("inserted\n"); */
 }
 
 void printSymbolTable() {
     printf("\nName\tData Type\tType\tLine\tConst\tInitialized\n");
     
-    for (int i=0; i < symbolTable.used; i++){
-        SymbolTableEntryType *symbolData = &(symbolTable.array[i]);
+    for (int i=0; i < symbolTableHead->used; i++){
+        SymbolTableEntryType *symbolData = &(symbolTableHead->array[i]);
 
         printf("%s\t%s\t%s\t%d\t%s\t%s\n",
             symbolData->name,
