@@ -22,12 +22,13 @@ editor_color = "#2e1e3e"
 window.config(bg=bg_color)
 
 # Data
-
-# code
 code = ""
 quadruples = ""
 symbol_table = ""
 log = ""
+
+quadruples_or_symbol_table = "quadruples"
+
 
 # tag dictionary
 tag_dict = {
@@ -93,30 +94,87 @@ def import_file(event):
     if file_path:
         read_import(file_path)
 
+def swap_quadruples_symbol_table(choice = 'quadruples'):
+    global quadruples_or_symbol_table
+    global text_quadruples_symbol_table
+    global show_quadruples_button
+
+    quadruples_or_symbol_table = choice
+
+    if quadruples_or_symbol_table == "quadruples":
+        show_quadruples_button.config(text = "Show Symbol Table")
+        text_quadruples_symbol_table.delete("1.0", tk.END)
+        text_quadruples_symbol_table.insert(tk.INSERT, quadruples)
+    else:
+        show_quadruples_button.config(text = "Show Quadruples")
+        text_quadruples_symbol_table.delete("1.0", tk.END)
+        text_quadruples_symbol_table.insert(tk.INSERT, symbol_table)
+
+def show_quadruples_symbol_table(event):
+    global quadruples_or_symbol_table
+
+    if quadruples_or_symbol_table == "quadruples":
+        swap_quadruples_symbol_table(choice = 'symbol_table')
+    else:
+        swap_quadruples_symbol_table(choice = 'quadruples')
+
 def compile_code(event=None):
     global code
     global quadruples
     global symbol_table
     global log
     global text_editor
-    global text_quadruples_symbol_tabl
+    global text_quadruples_symbol_table
     global text_log
 
     # clear all
     clear_all(None, clear_text_editor = False)
 
-    # compile code
-    system("python src\\compiler.py")
+    if code == "":
+        text_log.insert(tk.INSERT, "No code to compile")
+        return
+
+    # save code to file to be compiled
+    file = open("to_compile.cpp", "w")
+    file.write(code)
+    file.close()
+
+    # TODO: compile code
+    # system("python src\\compiler.py")
+
+    file = open("symbol_table.txt", "r")
+    symbol_table = file.read()
+    file.close()
+
+    file = open("log.txt", "r")
+    log = file.read()
+    file.close()
+
+    # log has this format:
+    # Line <line_number>: <error_message>
+    # if there is no error, log is empty, in which case we read the quadruples
+
+    errors_line_numbers = re.findall(r"Line (\d+)", log)
+    errors_line_numbers = [int(line_number) for line_number in errors_line_numbers]
+
+    print(errors_line_numbers)
+
+    if len(errors_line_numbers) == 0:
+        file = open("quad.asm", "r")
+        quadruples = file.read()
+        file.close()
+
+        swap_quadruples_symbol_table(choice = 'quadruples')
+
+    else:
+        # highlight errors
+        for line_number in errors_line_numbers:
+            text_editor.tag_add("error", f"{line_number}.0", f"{line_number}.end")
+
+        swap_quadruples_symbol_table(choice = 'symbol_table')
 
     # update text boxes
-    text_editor.insert(tk.INSERT, code)
-    text_quadruples_symbol_tabl.insert(tk.INSERT, quadruples)
-    text_quadruples_symbol_tabl.insert(tk.INSERT, "\n\n")
-    text_quadruples_symbol_tabl.insert(tk.INSERT, symbol_table)
     text_log.insert(tk.INSERT, log)
-
-    # highlight code
-    highlight_code(code)
 
 
 def clear_all(event=None, clear_text_editor = True):
@@ -125,7 +183,7 @@ def clear_all(event=None, clear_text_editor = True):
     global symbol_table
     global log
     global text_editor
-    global text_quadruples_symbol_tabl
+    global text_quadruples_symbol_table
     global text_log
 
     # clear all variables
@@ -137,7 +195,7 @@ def clear_all(event=None, clear_text_editor = True):
     symbol_table = ""
     log = ""
 
-    text_quadruples_symbol_tabl.delete("1.0", tk.END)
+    text_quadruples_symbol_table.delete("1.0", tk.END)
     text_log.delete("1.0", tk.END)
 
 
@@ -148,7 +206,7 @@ def highlight_code(code):
     global text_editor
     global tag_dict
 
-    # remove all tags
+    text_editor.tag_remove("error", "1.0", tk.END)
 
     # loop through all tag types as keys and their values
     for tag_type, tag_values in tag_dict.items():
@@ -162,7 +220,6 @@ def highlight_code(code):
 
         # highlight matches, handle multiple lines
         for matchNum, match in enumerate(matches, start=1):
-            print(matchNum, match)
             start_index = match.start()
 
             # get the line index by counting \n before the match
@@ -185,7 +242,6 @@ def highlight_code(code):
 
     # highlight matches, handle multiple lines
     for matchNum, match in enumerate(matches, start=1):
-        print(matchNum, match)
         start_index = match.start()
 
         # get the line index by counting \n before the match
@@ -206,7 +262,6 @@ def on_text_editor_change(event):
     # highlight code
     highlight_code(code)
 
-    print(code)
 
 # Widgets
 # root_frame
@@ -251,12 +306,15 @@ text_editor = scrolledtext.ScrolledText(left_frame, bg=editor_color, font=(
 for tag_type, tag_color in color_dict.items():
     text_editor.tag_config(tag_type, foreground=tag_color)
 
+text_editor.tag_config("error", background="#550000", font=(
+    "Consolas", 14, "bold"), foreground="#ff0000")
+
 text_editor.pack()
 
 # right frame consists of 1 text box for quadruples and symbol table, make this scrollable in both directions
-text_quadruples_symbol_tabl = scrolledtext.ScrolledText(right_frame, bg=editor_color, font=(
+text_quadruples_symbol_table = scrolledtext.ScrolledText(right_frame, bg=editor_color, font=(
     "Consolas", 10), fg="white", width=84, height=37)  # state=tk.DISABLED
-text_quadruples_symbol_tabl.pack()
+text_quadruples_symbol_table.pack()
 
 # bottom left frame consists of 1 text box for log
 text_log = scrolledtext.ScrolledText(bottom_left_frame, bg=editor_color, font=(
@@ -294,8 +352,8 @@ import_button.bind("<Button-1>", import_file)
 # on button click
 compile_button.bind("<Button-1>", compile_code)
 
-
-
+# on button click
+show_quadruples_button.bind("<Button-1>", show_quadruples_symbol_table)
 
 # show window
 window.mainloop()
