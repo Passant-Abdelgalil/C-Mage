@@ -382,7 +382,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void 
 
 void push(char * name) {
   // printf("begin, push\n");
