@@ -1,0 +1,57 @@
+Line 2: Can not declare constant without intialization
+Line 3: Can not assign variable value to const
+Line 7: Variable redeclaration, initially declared at 1
+Line 8: Variable redeclaration, initially declared at 1
+Line 8: Variable redeclaration, initially declared at 5
+Line 9: Variable redeclaration, initially declared at 1
+Line 9: Variable redeclaration, initially declared at 5
+Line 10: Variable redeclaration, initially declared at 1
+Line 10: Variable redeclaration, initially declared at 5
+Line 13: Variable redeclaration, x initially declared at 1
+Line 14: Variable redeclaration, x initially declared at 1
+Line 15: Variable redeclaration, z initially declared at 4
+Line 16: Variable redeclaration, z initially declared at 4
+Line 17: Variable redeclaration, z initially declared at 4
+Line 18: Variable redeclaration, y initially declared at 5
+Line 20: Variable redeclaration, x initially declared at 1
+Line 20: Variable redeclaration, y initially declared at 5
+Line 22: Variable redeclaration, z initially declared at 4
+Line 26: Variable redeclaration, x initially declared at 1
+Line 26: Variable redeclaration, y initially declared at 5
+Line 27: Variable redeclaration, initially declared at 1
+Line 27: Variable redeclaration, initially declared at 5
+Line 28: Variable redeclaration, z initially declared at 4
+Line 29: Variable redeclaration, x initially declared at 1
+Line 29: Variable redeclaration, y initially declared at 5
+Line 30: Variable redeclaration, z initially declared at 4
+Line 40: Variable redeclaration, x initially declared at 1
+Line 77: Variable redeclaration, i initially declared at 39
+Line 78: Variable redeclaration, x initially declared at 1
+Line 79: Variable redeclaration, y initially declared at 5
+Line 80: Variable redeclaration, x initially declared at 1
+Line 80: Variable redeclaration, y initially declared at 5
+Line 81: Variable redeclaration, z initially declared at 4
+Line 116: Variable redeclaration, x initially declared at 1
+Line 116: Variable redeclaration, y initially declared at 5
+Line 117: Variable redeclaration, z initially declared at 4
+Line 121: Variable redeclaration, x initially declared at 1
+Line 121: Variable redeclaration, y initially declared at 5
+Line 141: Variable redeclaration, x initially declared at 1
+Line 142: Variable redeclaration, x initially declared at 1
+Line 143: Variable redeclaration, x initially declared at 1
+Line 145: Variable redeclaration, initially declared at 1
+Line 145: Variable redeclaration, initially declared at 5
+Line 150: Variable redeclaration, x initially declared at 1
+Line 152: Variable redeclaration, x initially declared at 1
+Line 154: Variable redeclaration, x initially declared at 1
+Line 156: Variable redeclaration, x initially declared at 1
+Line 157: Variable redeclaration, x initially declared at 1
+Line 190: Variable redeclaration, x initially declared at 1
+Line 191: Variable redeclaration, y initially declared at 5
+Line 196: Variable redeclaration, x initially declared at 1
+Line 203: Variable redeclaration, x initially declared at 1
+Line 211: Variable redeclaration, y initially declared at 5
+Line 213: Variable redeclaration, z initially declared at 4
+Line 218: Variable redeclaration, x initially declared at 1
+Line 218: Variable redeclaration, y initially declared at 5
+Line 219: Variable redeclaration, z initially declared at 4
