@@ -3,11 +3,11 @@
     #include <stdlib.h>
     #include "parser_new.tab.h"
     void yyerror(char *);
-    extern int yylineno;
+    int yylineno;
 %}
 
 
-%option yylineno
+/* %option yylineno */
 
 
 %%
@@ -15,52 +15,50 @@
 #[\s\t]*.*                       {/* printf("%s",yytext); */} /* ignore comments */
 
     /* variables and constants declaration */
-"int"                           {   yylval.STRING = strdup(yytext); 
-                                    return INT_DECLARATION; }
-"float"                         { /* printf("%s",yytext); */ return FLOAT_DECLARATION; }
-"char"                          { /* printf("%s",yytext); */ return CHAR_DECLARATION; }
-"bool"                          { /* printf("%s",yytext); */ return BOOL_DECLARATION; }
-"const"                         { /* printf("%s",yytext); */ return CONST_DECLARATION; }
-"string"                        { /* printf("%s",yytext); */ return STRING_DECLARATION; }
-"enum"                          {   yylval.STRING = strdup(yytext); 
-                                    return ENUM_DECLARATION; }
+"int"                           { yylval.STRING = strdup(yytext);   return INT_DECLARATION; }
+"float"                         { yylval.STRING = strdup(yytext);   return FLOAT_DECLARATION; }
+"char"                          { yylval.STRING = strdup(yytext);   return CHAR_DECLARATION; }
+"bool"                          { yylval.STRING = strdup(yytext);   return BOOL_DECLARATION; }
+"const"                         { yylval.STRING = strdup(yytext);   return CONST_DECLARATION; }
+"string"                        { yylval.STRING = strdup(yytext);   return STRING_DECLARATION; }
+"enum"                          { yylval.STRING = strdup(yytext);   return ENUM_DECLARATION; }
 
     /* mathematical and logical expressions */
-[-+*/%(){};:=,\[\]]             { /* printf("%s",yytext); */ return *yytext; }
-"&&"                            { /* printf("%s",yytext); */ return AND; }
-"||"                            { /* printf("%s",yytext); */ return OR; }
-"!"                             { /* printf("%s",yytext); */ return NOT; }
-"=="                            { /* printf("%s",yytext); */ return EQ; }
-"!="                            { /* printf("%s",yytext); */ return NE; }
-"<"                             { /* printf("%s",yytext); */ return LT; }
-">"                             { /* printf("%s",yytext); */ return GT; }
-"<="                            { /* printf("%s",yytext); */ return LE; }
-">="                            { /* printf("%s",yytext); */ return GE; }
+[-+*/%(){};:=,\[\]]             { return *yytext; }
+"&&"                            { return AND; }
+"||"                            { return OR; }
+"!"                             { return NOT; }
+"=="                            { return EQ; }
+"!="                            { return NE; }
+"<"                             { return LT; }
+">"                             { return GT; }
+"<="                            { return LE; }
+">="                            { return GE; }
 
     /* control statements */
-"if"                            { /* printf("%s",yytext); */ return IF; }
-"else"                          { /* printf("%s",yytext); */ return ELSE; }
-"while"                         { /* printf("%s",yytext); */ return WHILE; }
-"for"                           { /* printf("%s",yytext); */ return FOR; }
-"do"                            { /* printf("%s",yytext); */ return DO; }
-"switch"                        { /* printf("%s",yytext); */ return SWITCH; }
-"case"                          { /* printf("%s",yytext); */ return CASE; }
-"default"                       { /* printf("%s",yytext); */ return DEFAULT; }
-"break"                         { /* printf("%s",yytext); */ return BREAK; }
-"continue"                      { /* printf("%s",yytext); */ return CONTINUE; }
+"if"                            { yylval.STRING = strdup(yytext);  return IF; }
+"else"                          { yylval.STRING = strdup(yytext);  return ELSE; }
+"while"                         { yylval.STRING = strdup(yytext);  return WHILE; }
+"for"                           { yylval.STRING = strdup(yytext);  return FOR; }
+"do"                            { yylval.STRING = strdup(yytext);  return DO; }
+"switch"                        { yylval.STRING = strdup(yytext);  return SWITCH; }
+"case"                          { yylval.STRING = strdup(yytext);  return CASE; }
+"default"                       { yylval.STRING = strdup(yytext);  return DEFAULT; }
+"break"                         { yylval.STRING = strdup(yytext);  return BREAK; }
+"continue"                      { yylval.STRING = strdup(yytext);  return CONTINUE; }
 
     /* functions */
-"return"                        { /* printf("%s",yytext); */ return RETURN; }
-"void"                          { /* printf("%s",yytext); */ return VOID; }
-"print"                         { /* printf("%s",yytext); */ return PRINT; }
+"return"                        { yylval.STRING = strdup(yytext);  return RETURN; }
+"void"                          { yylval.STRING = strdup(yytext);  return VOID; }
+"print"                         { yylval.STRING = strdup(yytext);  return PRINT; }
 
-"true"                          { /* printf("%s",yytext); */ return TRUE_KEYWORD; }
-"false"                         { /* printf("%s",yytext); */ return FALSE_KEYWORD; }
+"true"                          { yylval.BOOL = strdup(yytext);  return TRUE_KEYWORD; }
+"false"                         { yylval.BOOL = strdup(yytext);  return FALSE_KEYWORD; }
 
 [a-zA-Z_][a-zA-Z0-9_]*          { yylval.STRING = strdup(yytext);  return IDENTIFIER; }
 [0-9]+                          { yylval.INTEGER = atoi(yytext);  return INTEGER_CONSTANT; }
 [0-9]+"."[0-9]+                 { yylval.INTEGER = atof(yytext); return FLOAT_CONSTANT; }
-"'"[a-zA-Z0-9]"'"               { yylval.STRING = strdup(yytext); return CHAR_CONSTANT; }
+"'"[a-zA-Z0-9]"'"               { yylval.CHAR = strdup(yytext); return CHAR_CONSTANT; }
 \"[a-zA-Z0-9]+\"                { yylval.STRING = strdup(yytext);  return STRING_CONSTANT; }
 
 

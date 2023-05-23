@@ -1,4 +1,7 @@
-int x = 10;
+int x;
+const int e = 10;
+const int w = e;
+const int z = 5 + 6;
 int y = (x);
 
 enum test {x};
@@ -6,8 +9,8 @@ enum test {x,y};
 enum test {x=10,y};
 enum test {x=10,y=10};
 
-float x = 4+3;
-int x = x + y;
+float r = 4+3 * 2 ;
+int x = x + y + ( x + y);
 int x = x % y;
 bool z = x || y;
 bool z = x >= y;
