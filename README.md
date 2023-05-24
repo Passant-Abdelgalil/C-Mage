@@ -54,8 +54,8 @@ Flex and Bison
 - Function delcaration ( with default values )
 
 ## Symbol Table
+![sym_table](https://github.com/AhmadJamal01/Colon/assets/65499354/fe4a094c-2494-4e75-95fb-7d86cde95393)
 
-![image](https://github.com/AhmadJamal01/Colon/assets/65499354/4f1672d7-6f0b-4b75-95f6-8d7ba44354fa)
 
 ## Intermediate Code Syntax
 
