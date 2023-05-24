@@ -1,0 +1,3 @@
+
+Name	Data Type	Type	Line	Const	Initialized	Used
+i	int	VARIABLE	1	NO	YES	YES

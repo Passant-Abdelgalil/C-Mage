@@ -157,10 +157,13 @@
       }
     }
 
+    FILE *fpC;
+    // = fopen("output/quad.asm", "w");
+
     void push(char *);
     void test() {
       chk_undeflow(1);
-      printf("TEST %s\n", stak[--stakNext]);
+      fprintf(fpC, "TEST %s\n", stak[--stakNext]);
     }
     void sto();
     void expr(char *);
@@ -205,22 +208,22 @@
     }
 
     void print_lbl(int x) {
-      printf("L%d:\n", lbl_stk[lbl -x]);
+      fprintf(fpC, "L%d:\n", lbl_stk[lbl -x]);
     }
 
     void initCodeGen() {
     }
 
     void jz(int x) {
-      printf("JZ L%d\n", lbl_stk[lbl - x]);
+      fprintf(fpC, "JZ L%d\n", lbl_stk[lbl - x]);
     }
 
     void jnz(int x) {
-      printf("JNZ L%d\n", lbl_stk[lbl - x]);
+      fprintf(fpC, "JNZ L%d\n", lbl_stk[lbl - x]);
     }
 
     void jmp(int x) {
-      printf("JMP L%d\n", lbl_stk[lbl - x]);
+      fprintf(fpC, "JMP L%d\n", lbl_stk[lbl - x]);
     }
 %}
 
@@ -458,6 +461,7 @@ void yyerror(char *s) {
 
 int main(int argc, char *argv[])
 {
+    fpC = fopen("output/quad.asm", "w");
     yyin = fopen(argv[1], "r");
     initSymbolTable(1000);
     printf("will parse\n");
@@ -471,6 +475,7 @@ int main(int argc, char *argv[])
         printf("\nParsing successful ya regala!\n");
     }
     fclose(yyin); 
+    fclose(fpC);
     return 0;
 }
 
@@ -579,7 +584,7 @@ void push(char * name) {
 void sto() {
   // printf("STOOO\n");
   chk_undeflow(2);
-  printf("STO %s, %s\n", stak[stakNext-1], stak[stakNext-2]);
+  fprintf(fpC, "STO %s, %s\n", stak[stakNext-1], stak[stakNext-2]);
 }
 
 void expr(char *op) {
@@ -608,7 +613,7 @@ void expr(char *op) {
     exit(1);
   }
 
-  printf("%s %s, %s, %s\n", str, stak[stakNext-2], stak[stakNext-1], reg);
+  fprintf(fpC, "%s %s, %s, %s\n", str, stak[stakNext-2], stak[stakNext-1], reg);
   stakNext--;
   strcpy(stak[stakNext-1], reg);
 }
@@ -624,7 +629,7 @@ void expr1(char *op)
   else if (strcmp(op, "!")  == 0) str = "NOT";
   else if (strcmp(op, "-")  == 0) str = "NEG";
 
-  printf("%s %s, %s\n", str, stak[stakNext-1], reg);
+  fprintf(fpC, "%s %s, %s\n", str, stak[stakNext-1], reg);
   stakNext--;
   strcpy(stak[stakNext-1], reg);
 }
