@@ -134,13 +134,15 @@ def compile_code(event=None):
         text_log.insert(tk.INSERT, "No code to compile")
         return
 
-    # save code to file to be compiled
+    # save code to file to be compiled, create file if it doesn't exist
     file = open("to_compile.cpp", "w")
     file.write(code)
     file.close()
 
     # TODO: compile code
-    # system("python src\\compiler.py")
+    # need to go to src folder and run the following command
+    # make phase2
+    system("cd src && make phase2")
 
     file = open("output/symbol_table.txt", "r")
     symbol_table = file.read()
