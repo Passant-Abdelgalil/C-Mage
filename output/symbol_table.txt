@@ -1,3 +1,7 @@
 
 Name	Data Type	Type	Line	Const	Initialized	Used
-x	int	VARIABLE	1	NO	YES	NO
+x	int	VARIABLE	1	NO	NO	YES
+w	int	CONSTANT	3	YES	NO	NO
+z	int	CONSTANT	4	YES	YES	NO
+radius	int	VARIABLE	5	NO	YES	NO
+dee	int	VARIABLE	7	NO	NO	NO

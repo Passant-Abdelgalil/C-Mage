@@ -472,7 +472,7 @@ void yyerror(char *s) {
 
 int main(int argc, char *argv[])
 {
-    fpC = fopen("../output/quad.asm", "w");
+    fpC = fopen("output/quad.asm", "w");
     yyin = fopen(argv[1], "r");
     initSymbolTable(1000);
     printf("will parse\n");
@@ -1143,7 +1143,7 @@ void insertSymbol(SymbolTableEntryType symbol) {
 }
 
 void printErrors(){
-    FILE *fp = fopen("../output/errors.txt", "w");
+    FILE *fp = fopen("output/errors.txt", "w");
     if(fp == NULL) {
         printf("Error opening errors.txt file!\n");
         exit(1);
@@ -1154,7 +1154,7 @@ void printErrors(){
 }
 
 void printWarnings(){
-    FILE *fp = fopen("../output/warnings.txt", "w");
+    FILE *fp = fopen("output/warnings.txt", "w");
     if(fp == NULL) {
         printf("Error opening warnings.text file!\n");
         exit(1);
@@ -1166,7 +1166,7 @@ void printWarnings(){
 
 void printSymbolTable() {
      // write symbol table to file
-    FILE *fp = fopen("../output/symbol_table.txt", "w");
+    FILE *fp = fopen("output/symbol_table.txt", "w");
     if(fp == NULL) {
         printf("Error opening symbol_table.txt file!\n");
         exit(1);

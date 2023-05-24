@@ -1,1 +1,4 @@
-Line 2: Variable redeclaration, x initially declared at 1
+Line 2: Can not declare constant without intialization
+Line 3: Undeclared identifier, e
+Line 7: Undeclared identifier, s
+Line 22: Undeclared identifier, de

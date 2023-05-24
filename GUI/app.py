@@ -1,6 +1,7 @@
 import tkinter as tk
 from os import system
 import re
+import subprocess
 
 import tkinter.scrolledtext as scrolledtext
 from tkinter.filedialog import askopenfilename
@@ -135,14 +136,15 @@ def compile_code(event=None):
         return
 
     # save code to file to be compiled, create file if it doesn't exist
-    file = open("to_compile.cpp", "w")
+    file = open("GUI/to_compile.cpp", "w")
     file.write(code)
     file.close()
 
     # TODO: compile code
-    # need to go to src folder and run the following command
-    # make phase2
-    system("cd src && make phase2")
+    # run this command in terminal: make gui
+    # wait for it to finish
+    sup_bro_sis =  subprocess.run(["make", "gui"])
+
 
     file = open("output/symbol_table.txt", "r")
     symbol_table = file.read()
@@ -168,8 +170,8 @@ def compile_code(event=None):
     # for each line in warnings, add WARNING prefix to it
     warnings = "\n".join([f"WARNING: {line}" for line in warnings.split("\n") if line != ""])
 
-    # merge errors and warnings and sort them (based on line number at index 8
-    log = "\n".join(sorted([f"{line[8:]}" for line in (errors + "\n" + warnings).split("\n") if line != ""]))
+    # merge errors and warnings and sort them (based on line number at index 14
+    log = "\n".join(sorted([f"{line}" for line in (errors + "\n" + warnings).split("\n") if line != ""], key=lambda x: int(x.split(":")[1][6:])))
 
     # log has this format:
     # Line <line_number>: <error_message>
@@ -197,6 +199,14 @@ def compile_code(event=None):
 
     # update text boxes
     text_log.insert(tk.INSERT, log)
+
+    # for each line in log, highlight it
+    for i, line in enumerate(log.split("\n")):
+        if line != "":
+            if line[:5] == "ERROR":
+                text_log.tag_add("error", f"{i+1}.0", f"{i+1}.5")
+            elif line[:7] == "WARNING":
+                text_log.tag_add("warning", f"{i+1}.0", f"{i+1}.7")
 
 
 def clear_all(event=None, clear_text_editor = True):
@@ -339,12 +349,19 @@ text_editor.pack()
 
 # right frame consists of 1 text box for quadruples and symbol table, make this scrollable in both directions
 text_quadruples_symbol_table = scrolledtext.ScrolledText(right_frame, bg=editor_color, font=(
-    "Consolas", 10), fg="white", width=84, height=37)  # state=tk.DISABLED
+    "Consolas", 12), fg="white", width=65, height=29)  # state=tk.DISABLED
 text_quadruples_symbol_table.pack()
 
 # bottom left frame consists of 1 text box for log
 text_log = scrolledtext.ScrolledText(bottom_left_frame, bg=editor_color, font=(
     "Consolas", 14), fg="white", width=120, height=11)   # state=tk.DISABLED
+
+text_log.tag_config("error", background="#550000", font=(
+    "Consolas", 12, "bold"), foreground="#ff0000")
+
+text_log.tag_config("warning", background="#444400", font=(
+    "Consolas", 12, "bold"), foreground="#ffff00")
+
 text_log.pack()
 
 # bottom right frame consists of 4 buttons: import, compile, show quadruples, clear, buttons are stacked vertically

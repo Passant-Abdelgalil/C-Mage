@@ -1,0 +1,2 @@
+Line 10: Variable  used before, initialization
+Line 19: Variable  used before, initialization
