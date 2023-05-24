@@ -1176,12 +1176,14 @@ void printSymbolTable() {
         exit(1);
     }
 
-    fprintf(fp, "\nName\tData Type\tType\tLine\tConst\tInitialized\tUsed\n");
+    // fprintf(fp, "\nName\tDataType\tType\tLine\tConst\tInitialized\tUsed\n");
+    fprintf(fp, "Name       DataType     Type       Line Const Init Used\n");
+    fprintf(fp, "-------------------------------------------------------\n");
 
     for(int i=0; i < symbolTableHead->used; i++) {
         SymbolTableEntryType entry = symbolTableHead->array[i];
 
-        fprintf(fp, "%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+        fprintf(fp, "%-10s %-12s %-10s %-4d %-5s %-5s %-4s\n",
             entry.name,
             entry.datatype,
             types[entry.type],

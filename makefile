@@ -39,5 +39,5 @@ ki: build
 
 gui: build
 	gcc build/parser.tab.c build/lex.yy.c -o bin/a.exe
-	bin/a.exe GUI/to_compile.cln
+	./bin/a.exe ./GUI/to_compile.cln
 

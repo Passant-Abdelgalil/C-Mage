@@ -1,3 +1,8 @@
-
-Name	Data Type	Type	Line	Const	Initialized	Used
-i	int	VARIABLE	1	NO	YES	YES
+Name       DataType     Type       Line Const Init Used
+-------------------------------------------------------
+x          int          VARIABLE   2    NO    NO    YES 
+y          int          VARIABLE   3    NO    NO    NO  
+z          int          VARIABLE   5    NO    YES   YES 
+asdl12323  int          VARIABLE   7    NO    NO    NO  
+saasddf    string       VARIABLE   12   NO    NO    NO  
+asasddf    int          VARIABLE   16   NO    YES   NO  

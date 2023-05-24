@@ -1,0 +1,16 @@
+int x = 13;
+
+float y = 123.51;
+
+string s = "asd";
+
+char c = '1';
+
+enum test{ez=1,ey=12,ee=12414};
+
+const int cx = 123;
+
+
+const float fx = 123.130;
+
+enum zztest{xez=1,exy=12,exe=12414};

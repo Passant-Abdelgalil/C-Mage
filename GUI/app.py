@@ -9,12 +9,12 @@ from tkinter.filedialog import askopenfilename
 
 # Window
 window = tk.Tk()
-window.title("Text Editor")
+window.title("Colon Language Playground")
 
 # suitable window sizes: 800x600, 1024x768, 1280x720, 1280x1024, 1366x768, 1600x900, 1920x1080
 
-window_size = (1600, 900)
-frame_padding = 50
+window_size = (1200, 620)
+frame_padding = 10
 frame_size = (window_size[0] - frame_padding, window_size[1] - frame_padding)
 window.geometry(f"{window_size[0]}x{window_size[1]}")
 window.resizable(False, False)
@@ -38,7 +38,7 @@ tag_dict = {
     "keyword": ["if", "else", "while", "for", "true", "false", "return", "break", "case", "continue", "default", "do", "enum", "sizeof", "switch", "typedef", "using", "namespace", "cout", "cin", "endl", "std", "main"],
     "operator": ["\+", "-", "\*", "/", "\%", "\+\+", "--", "==", "!=", ">", "<", ">=", "<=", "&&", "\|\|", "!", "\&", "\|", "\^", "\~", "<<", ">>", "\?", "\:", "\=", "\+=", "-=", "\*=", "/=", "\%=", "\&=", "\|=", "\^=", "<<=", ">>="],
     "preprocessor": ["#include", "#define", "#ifdef", "#ifndef", "#endif", "#if", "#else", "#elif", "#undef", "#pragma", "#error", "#line", "#"],
-    "comment": ["\/\/", "\/\*", "\*\/"]
+    "comment": ["#"]
 }
 
 color_dict = {
@@ -77,6 +77,11 @@ def read_import(file_path):
     # update text editor
     text_editor.insert(tk.INSERT, code)
 
+    # prepend line number to the line
+    for line_index, line in enumerate(code.split("\n"), start=1):
+        text_editor.insert(f"{line_index}.0", f"{line_index:<5}")
+
+    code = text_editor.get("1.0", tk.END)
     # highlight code
     highlight_code(code)
 
@@ -90,7 +95,7 @@ def import_file(event):
 
     # open file
     file_path = askopenfilename(
-        filetypes=[("C++ Files", "*.cpp"), ("C Files", "*.c"), ("Header Files", "*.h")])
+        filetypes=[("Cln File", ".cln"), ("C++ Files", "*.cpp"), ("C Files", "*.c"), ("Header Files", "*.h")])
 
     if file_path:
         read_import(file_path)
@@ -117,6 +122,7 @@ def show_quadruples_symbol_table(event):
     if quadruples_or_symbol_table == "quadruples":
         swap_quadruples_symbol_table(choice = 'symbol_table')
     else:
+        print('showing quads')
         swap_quadruples_symbol_table(choice = 'quadruples')
 
 def compile_code(event=None):
@@ -135,10 +141,15 @@ def compile_code(event=None):
         text_log.insert(tk.INSERT, "No code to compile")
         return
 
+    lines = '\n'.join([line[5:] for line in code.split("\n")])
+    print(lines)
+
     # save code to file to be compiled, create file if it doesn't exist
-    file = open("GUI/to_compile.cpp", "w")
-    file.write(code)
+    file = open("GUI/to_compile.cln", "w")
+    # file.write(code)
+    file.write(lines)
     file.close()
+
 
     # TODO: compile code
     # run this command in terminal: make gui
@@ -177,13 +188,13 @@ def compile_code(event=None):
     # Line <line_number>: <error_message>
     # if there is no error, log is empty, in which case we read the quadruples
 
-    print(errors_line_numbers)
+    # print(errors_line_numbers)
+    # print(quadruples)
+    file = open("output/quad.asm", "r")
+    quadruples = file.read()
+    file.close()
 
     if len(errors_line_numbers) == 0:
-        file = open("output/quad.asm", "r")
-        quadruples = file.read()
-        file.close()
-
         swap_quadruples_symbol_table(choice = 'quadruples')
 
     else:
@@ -251,6 +262,7 @@ def highlight_code(code):
 
         text_editor.tag_remove(tag_type, "1.0", tk.END)
 
+
         # highlight matches, handle multiple lines
         for matchNum, match in enumerate(matches, start=1):
             start_index = match.start()
@@ -268,6 +280,7 @@ def highlight_code(code):
             else:
                 text_editor.tag_add(
                     tag_type, f"{line_index}.0", f"{line_index}.end")
+
 
     # highlight strings
     # find all matches of "string"
@@ -300,16 +313,16 @@ def on_text_editor_change(event):
 # root_frame
 root_frame = tk.Frame(
     window, width=window_size[0], height=window_size[1], bg=bg_color)
-root_frame.pack(pady=30, padx=20)
+root_frame.pack(pady=13, padx=12)
 
 # divided into a top frame 65% and a bottom frame 35%
 top_frame = tk.Frame(
     root_frame, width=frame_size[0], height=frame_size[1] * 0.65, bg=bg_color)
-top_frame.pack(pady=10, padx=10)
+top_frame.pack(pady=11, padx=11)
 
 bottom_frame = tk.Frame(
     root_frame, width=frame_size[0], height=frame_size[1] * 0.35, bg=bg_color)
-bottom_frame.pack(pady=10, padx=10, fill=tk.X)
+bottom_frame.pack(side=tk.BOTTOM, pady=11, padx=11, fill=tk.X)
 
 # top frame divided into a left frame 50% and a right frame 50%
 
@@ -325,36 +338,37 @@ right_frame.pack(side=tk.RIGHT, padx=10)
 
 bottom_left_frame = tk.Frame(
     bottom_frame, width=frame_size[0] * 0.80, height=frame_size[1] * 0.35, bg=editor_color)
-bottom_left_frame.pack(side=tk.LEFT, padx=10)
+bottom_left_frame.pack(side=tk.LEFT, padx=1)
 
 # make this take its space
 bottom_right_frame = tk.Frame(
     bottom_frame, width=frame_size[0] * 0.20, height=frame_size[1] * 0.35, bg=bg_color)
-bottom_right_frame.pack(side=tk.RIGHT, padx=10, fill=tk.BOTH, expand=True)
+bottom_right_frame.pack(side=tk.RIGHT, padx=1, fill=tk.BOTH, expand=True)
 
 # left frame consists of a text editor
 text_editor = scrolledtext.ScrolledText(left_frame, bg=editor_color, font=(
-    "Consolas", 14), fg="white", width=80, height=25)
+    "Consolas", 12), fg="white", width=50, height=20)
+
 # color tags
 for tag_type, tag_color in color_dict.items():
     text_editor.tag_config(tag_type, foreground=tag_color)
 
 text_editor.tag_config("error", background="#550000", font=(
-    "Consolas", 14, "bold"), foreground="#ff0000")
+    "Consolas", 12, "bold"), foreground="#ff0000")
 
 text_editor.tag_config("warning", background="#444400", font=(
-    "Consolas", 14, "bold"), foreground="#ffff00")
+    "Consolas", 12, "bold"), foreground="#ffff00")
 
 text_editor.pack()
 
 # right frame consists of 1 text box for quadruples and symbol table, make this scrollable in both directions
 text_quadruples_symbol_table = scrolledtext.ScrolledText(right_frame, bg=editor_color, font=(
-    "Consolas", 12), fg="white", width=65, height=29)  # state=tk.DISABLED
+    "Consolas", 12), fg="white", width=60, height=19)  # state=tk.DISABLED
 text_quadruples_symbol_table.pack()
 
 # bottom left frame consists of 1 text box for log
 text_log = scrolledtext.ScrolledText(bottom_left_frame, bg=editor_color, font=(
-    "Consolas", 14), fg="white", width=120, height=11)   # state=tk.DISABLED
+    "Consolas", 12), fg="white", width=80, height=11)   # state=tk.DISABLED
 
 text_log.tag_config("error", background="#550000", font=(
     "Consolas", 12, "bold"), foreground="#ff0000")
@@ -365,20 +379,20 @@ text_log.tag_config("warning", background="#444400", font=(
 text_log.pack()
 
 # bottom right frame consists of 4 buttons: import, compile, show quadruples, clear, buttons are stacked vertically
-import_button = tk.Button(bottom_right_frame, text="Import", width=22,
-                          height=2, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
+import_button = tk.Button(bottom_right_frame, text="Import", width=15,
+                          height=1, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
 import_button.pack(pady=5)
 
-compile_button = tk.Button(bottom_right_frame, text="Compile", width=22,
-                           height=2, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
+compile_button = tk.Button(bottom_right_frame, text="Compile", width=15,
+                           height=1, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
 compile_button.pack(pady=5)
 
 show_quadruples_button = tk.Button(bottom_right_frame, text="Show Quadruples",
-                                   width=22, height=2, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
+                                   width=15, height=1, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
 show_quadruples_button.pack(pady=5)
 
-clear_button = tk.Button(bottom_right_frame, text="Clear", width=22,
-                         height=2, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
+clear_button = tk.Button(bottom_right_frame, text="Clear", width=15,
+                         height=1, bg=editor_color, fg="white", font=("Arial", 11, "bold"))
 clear_button.pack(pady=5)
 
 # events

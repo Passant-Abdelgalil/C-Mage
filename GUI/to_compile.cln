@@ -4,7 +4,7 @@ int y = x+1213;
 # Undeclared
 int z = qweui + 123;
 # UnUsed
-int asdl123;
+int asdl12323;
 # Const
 const int x = z;
 # Type mismatch
@@ -25,3 +25,4 @@ enum tes213t {wqe=10,aasdsd};
 enum tezxcst {sa=10,asdasf=12};
 
 # 
+
