@@ -45,6 +45,7 @@
 "case"                          { yylval.STRING = strdup(yytext);  return CASE; }
 "default"                       { yylval.STRING = strdup(yytext);  return DEFAULT; }
 "break"                         { yylval.STRING = strdup(yytext);  return BREAK; }
+      /* "break_case"                    { yylval.STRING = strdup(yytext);  return BREAK_CASE; } */
 "continue"                      { yylval.STRING = strdup(yytext);  return CONTINUE; }
 
     /* functions */
@@ -57,7 +58,7 @@
 
 [a-zA-Z_][a-zA-Z0-9_]*          { yylval.STRING = strdup(yytext);  return IDENTIFIER; }
 [0-9]+                          { yylval.INTEGER = atoi(yytext);  return INTEGER_CONSTANT; }
-[0-9]+"."[0-9]+                 { yylval.INTEGER = atof(yytext); return FLOAT_CONSTANT; }
+[0-9]+"."[0-9]+                 { yylval.FLOAT = atof(yytext); return FLOAT_CONSTANT; }
 "'"[a-zA-Z0-9]"'"               { yylval.CHAR = yytext[1]; return CHAR_CONSTANT; }
 \"[a-zA-Z0-9]+\"                { yylval.STRING = strdup(yytext);  return STRING_CONSTANT; }
 

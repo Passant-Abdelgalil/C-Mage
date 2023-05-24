@@ -146,14 +146,11 @@ char *trim(char *s)
         sprintf(temp, "R%d", regNext++);
         return temp;
     }
-
-    int labelNext = 100;
-    char *label() {
-        char *temp = (char *) malloc(10);
-        sprintf(temp, "L%d", labelNext++);
-        return temp;
+    int getRnd() {
+      return rand() % 1000;
     }
 
+    int labelNext = 100;
     void chk_undeflow(int x) {
       if (stakNext < x) {
         printf("ERROR: stack underflow\n");
@@ -172,9 +169,51 @@ char *trim(char *s)
     FILE *fpC;
 
     void push(char *);
+    void pop(int x) {
+      chk_undeflow(x);
+      stakNext -= x;
+    }
     void test() {
       chk_undeflow(1);
       fprintf(fpC, "TEST %s\n", stak[--stakNext]);
+    }
+    void cmp(int x) {
+      // compare top of stack with x
+      // don't pop
+      chk_undeflow(1);
+      fprintf(fpC, "CMP %s, %d\n", stak[stakNext - 1], x);
+    }
+    void decl_func_s(char * ae) {
+      fprintf(fpC, "FUNC%s:\n", ae);
+    };
+    void decl_func_e() {
+      char *reg = tempReg();
+      fprintf(fpC, "POP %s\n", reg);
+      fprintf(fpC, "JMP %s\n", reg);
+      fprintf(fpC, "\n");
+    }
+    void call_func(char *ae) {
+      // new label
+      int lbi = getRnd();
+      // print here so that we come back
+      char lbss[30];
+      sprintf(lbss, "L%d", lbi);
+
+      fprintf(fpC, "PUSH %s\n", lbss);
+      fprintf(fpC, "CALL %s\n", ae);
+      fprintf(fpC, "%s:\n", lbss);
+    }
+    void rtn() {
+      // stack has: return value THEN return address
+      // Need to swap them
+      // printf("Rtn\n");
+      // printf(stak[stakNext-1]);
+      char *r1 = tempReg();
+      // char *r2 = tempReg();
+      fprintf(fpC, "POP  %s\n", r1);
+      // fprintf(fpC, "POP  %s\n", r2);
+      fprintf(fpC, "PUSH %s\n", stak[stakNext-1]);
+      fprintf(fpC, "PUSH %s\n", r1);
     }
     void sto();
     void expr(char *);
@@ -182,9 +221,6 @@ char *trim(char *s)
     char *ito_str(int);
     char *fto_str(float);
 
-    int getRnd() {
-      return rand() % 1000;
-    }
 
     // scope stack
     int scop_stk[100];
@@ -303,8 +339,8 @@ braced_statements:                      '{' { openScope(); } statement_list '}' 
 statement:                              expression
 |                                       variable_declaration
 |                                       assignment  
-|                                       RETURN                              { /*rtn(); */}                              
-|                                       RETURN expression                   { /* rtn();*/ }                         
+|                                       RETURN                              { /*rtn();*/ }                              
+|                                       RETURN expression                   { rtn(); }                         
 |                                       BREAK                        {jmp(2);}                 // {printf("break\n");}
 |                                       CONTINUE                       {jmp(1);}                  // {printf("continue\n");}
 |                                       
@@ -389,11 +425,11 @@ expression:                             IDENTIFIER                              
 } */
 ;
 
-function_declaration:                   variable_type   IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
-|                                       VOID            IDENTIFIER {/*decl_func_s($2);*/}  '(' parameter_list ')' braced_statements {/*decl_func_e($2);*/ handleFunctionDeclaration($1, $2, $5); }
+function_declaration:                   variable_type   IDENTIFIER {decl_func_s($2);}  '(' parameter_list ')' braced_statements {decl_func_e($2); handleFunctionDeclaration($1, $2, $5); }
+|                                       VOID            IDENTIFIER {decl_func_s($2);}  '(' parameter_list ')' braced_statements {decl_func_e($2); handleFunctionDeclaration($1, $2, $5); }
 ;
 
-function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; /*call_func($1);*/}
+function_call:                          IDENTIFIER '(' arguemnt_list ')'                { $$ = $1; /*call_func($1);*/ }
 |                                       PRINT { /*call_rf_print();*/} '(' arguemnt_list ')'        { $$ = $1; }
 ;
 
@@ -410,8 +446,8 @@ parameter_list:                         parameter_list ',' parameter            
 parameter:                              general_declaration                                     { $$ = $1; }
 ;
 
-control_statement:                      if_statement            {/*pop the labels */ /*pop(2);*/}
-|                                       while_loop              {/*pop the labels */ /*pop(2);*/}
+control_statement:                      if_statement
+|                                       while_loop
 |                                       do_while_loop
 |                                       switch_statement
 |                                       for_loop
@@ -440,14 +476,14 @@ do_while_loop:                          DO {psh_lbl(3);print_lbl(3);} braced_sta
 ;
 
 
-switch_statement:                       SWITCH '(' expression ')' '{' case_list '}'
+switch_statement:                       SWITCH '(' IDENTIFIER ')' {psh_lbl(1);push($3);} '{' case_list '}' {pop(1);print_lbl(1);pop_lbl(1);}
 ;
 
 case_list:                              case_list case
 |                                       case
 ;
 
-case:                                   CASE expression ':' statement_list
+case:                                   CASE INTEGER_CONSTANT {psh_lbl(1);cmp($2);jnz(1);} ':' statement_list /*BREAK ';'*/ {/*jmp(2);*/print_lbl(1);pop_lbl(1);}
 |                                       DEFAULT ':' statement_list
 ;
 
@@ -602,6 +638,7 @@ void sto() {
   // printf("STOOO\n");
   chk_undeflow(2);
   fprintf(fpC, "STO %s, %s\n", stak[stakNext-1], stak[stakNext-2]);
+  stakNext -= 2;
 }
 
 void expr(char *op) {
@@ -647,7 +684,7 @@ void expr1(char *op)
   else if (strcmp(op, "-")  == 0) str = "NEG";
 
   fprintf(fpC, "%s %s, %s\n", str, stak[stakNext-1], reg);
-  stakNext--;
+  // stakNext--;
   strcpy(stak[stakNext-1], reg);
 }
 

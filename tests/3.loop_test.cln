@@ -1,6 +1,22 @@
+
+do
+{
+
+    x = 1;
+    continue;
+    break;
+} while (x + 1);
+
+int asdassadx= 11;
+
 for (int i = 0; i < 5; i = i + 1)
 {
-    x = 11;
+  int x = 1;
+}
+
+
+for (int i = 0; i < 5; i = i + 1)
+    int x = 11;
     while (x > 10)
     {
         x = 11;
@@ -17,10 +33,3 @@ for (int i = 0; i < 5; i = i + 1)
     }
     continue;
 }
-do
-{
-
-    x = 1;
-    continue;
-    break;
-} while (x + 1);

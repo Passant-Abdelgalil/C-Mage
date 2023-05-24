@@ -1,9 +1,12 @@
-ADD x, 1213, R0
-STO R0, y
-ADD qweui, 123, R1
-STO R1, z
-STO asdas, saasddf
-ADD 123, asdf, R2
-ADD 123, asdf, R3
-STO R3, asasddf
-ADD y, 10, R4
+STO 13, x
+STO 123.510002, y
+STO "asd", s
+STO 1, c
+STO 1, ez
+STO 12, ey
+STO 12414, ee
+STO 123, cx
+STO 123.129997, fx
+STO 1, xez
+STO 12, exy
+STO 12414, exe

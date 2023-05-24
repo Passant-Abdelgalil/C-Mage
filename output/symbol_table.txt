@@ -1,8 +1,16 @@
 Name       DataType     Type       Line Const Init Used
 -------------------------------------------------------
-x          int          VARIABLE   2    NO    NO    YES 
-y          int          VARIABLE   3    NO    NO    NO  
-z          int          VARIABLE   5    NO    YES   YES 
-asdl12323  int          VARIABLE   7    NO    NO    NO  
-saasddf    string       VARIABLE   12   NO    NO    NO  
-asasddf    int          VARIABLE   16   NO    YES   NO  
+x          int          VARIABLE   1    NO    YES   NO  
+y          float        VARIABLE   3    NO    YES   NO  
+s          string       VARIABLE   5    NO    YES   NO  
+c          char         VARIABLE   7    NO    YES   NO  
+ez         enum test    CONSTANT   9    YES   YES   YES 
+ey         enum test    CONSTANT   9    YES   YES   YES 
+ee         enum test    CONSTANT   9    YES   YES   YES 
+test       enum         ENUM       9    YES   YES   NO  
+cx         int          CONSTANT   11   YES   YES   NO  
+fx         float        CONSTANT   14   YES   YES   NO  
+xez        enum zztest  CONSTANT   16   YES   YES   YES 
+exy        enum zztest  CONSTANT   16   YES   YES   YES 
+exe        enum zztest  CONSTANT   16   YES   YES   YES 
+zztest     enum         ENUM       16   YES   YES   NO  

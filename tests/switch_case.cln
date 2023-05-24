@@ -1,0 +1,18 @@
+int x = 142;
+
+switch (x) {
+
+  case 123:
+    int y = 123;
+    x = 56;
+    break;
+
+  case 90:
+    x = 70;
+    break;
+
+  default:
+    char c = '4';
+    bool B = true;
+
+}

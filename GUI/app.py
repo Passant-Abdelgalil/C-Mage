@@ -141,21 +141,20 @@ def compile_code(event=None):
         text_log.insert(tk.INSERT, "No code to compile")
         return
 
+    # remove line numbers
     lines = '\n'.join([line[5:] for line in code.split("\n")])
-    print(lines)
+    code = lines
+    print(code)
 
     # save code to file to be compiled, create file if it doesn't exist
     file = open("GUI/to_compile.cln", "w")
-    # file.write(code)
-    file.write(lines)
+    file.write(code)
     file.close()
-
 
     # TODO: compile code
     # run this command in terminal: make gui
     # wait for it to finish
     sup_bro_sis =  subprocess.run(["make", "gui"])
-
 
     file = open("output/symbol_table.txt", "r")
     symbol_table = file.read()

@@ -1,9 +1,20 @@
 int as = 123 * 32 / 123.412 % 131;
 
 
-int lg = 123 || 123 && true;
+int bas = 123 * 32 / 123 % 131;
 
+int x = (4);
+
+x = -4;
+x = -(4);
+
+bool lg = 123 || 123 && true;
+bool fxxd = !(true || !false);
+bool lg2 = false || false && true;
 
 int ng = -(123 + 12);
 
-int nt = ~(true || false)
+bool nt = !(true || false);
+
+bool fx = x <= bas;
+bool X = 13;

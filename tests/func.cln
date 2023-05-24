@@ -1,0 +1,23 @@
+void fun1() {
+  int y = 1;
+  return;
+}
+
+fun1();
+
+int fun2() {
+  return 2;
+}
+
+int x = fun2();
+
+
+int fun3(int arx) {
+  arx = 124;
+  return arx;
+}
+
+
+int zz = fun3(54);
+
+int yy = fun3(zz);

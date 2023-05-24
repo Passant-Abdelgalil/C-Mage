@@ -1,0 +1,19 @@
+int z;
+
+int sum(int x=4, int y=13)
+{
+  # int x = 4;
+  # int y = 123;
+  return x + y;
+}
+
+void assignZ(int xyx=155) {
+  z = xyx;
+}
+
+void main()
+{
+  int a = sum(10, 20);
+  a = sum(a, a);
+  assignZ(a);
+}
