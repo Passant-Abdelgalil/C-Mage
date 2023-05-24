@@ -20,4 +20,7 @@ int dee = s;
         int de = 10;
     }
     int radius = de;
+    {
+      int x = 4;
+    }
 }

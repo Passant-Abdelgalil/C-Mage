@@ -85,9 +85,6 @@
     void initSymbolTable(size_t initialSize);
     void openScope();
     void closeScope();
-    void printSymbolTable();
-    void printWarnings();
-    void printErrors();
 
 
     // Variables Functions
@@ -106,13 +103,13 @@
     int checkInitialization(char* identifier);
     // Helper functions
 
-    char *ltrim(char *s)
+char *ltrim(char *s)
     {
         while(isspace(*s)) s++;
         return s;
     }
 
-    char *rtrim(char *s)
+char *rtrim(char *s)
     {
         char* back = s + strlen(s);
         while(isspace(*--back));
@@ -120,13 +117,13 @@
         return s;
     }
 
-    char *trim(char *s)
+char *trim(char *s)
     {
         return rtrim(ltrim(s));
     }
 
 
-    // type functions
+// type functions
     struct nodeType* intNode(int value);
     struct nodeType* floatNode(float value);
     struct nodeType* boolNode(char* value);
@@ -171,8 +168,8 @@
       }
     }
 
+    // Code file handler
     FILE *fpC;
-    // = fopen("output/quad.asm", "w");
 
     void push(char *);
     void test() {
@@ -475,7 +472,7 @@ void yyerror(char *s) {
 
 int main(int argc, char *argv[])
 {
-    fpC = fopen("output/quad.asm", "w");
+    fpC = fopen("../output/quad.asm", "w");
     yyin = fopen(argv[1], "r");
     initSymbolTable(1000);
     printf("will parse\n");

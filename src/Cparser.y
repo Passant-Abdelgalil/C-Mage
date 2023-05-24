@@ -12,17 +12,23 @@
     extern FILE *yyout;
     extern int yylineno;
 
+    void printSymbolTable();
+
+
+
     typedef enum { KEYWORD, FUNCTION, VARIABLE, CONSTANT, ENUM } SymbolType;
     char* types [5] = {"KEYWORD", "FUNCTION", "VARIABLE", "CONSTANT", "ENUM"};
 
     typedef enum {Int, Float, String, Bool, Char} valueDatatype;
     char* datatypes [5] = {"int", "float", "string", "bool", "char"};
     int typeToEnum(char* value) {
+        printf("TYPE TO ENUM type is %s\n", value);
         for (int i = 0; i < 5; i++) {
             if (strcmp(datatypes[i], value) == 0) {
                 return i;
             }
         }
+        printSymbolTable();
         return -1; // Value not found
     }
     union NodeValue {
@@ -58,7 +64,6 @@
         bool is_const;
     };
     void initSymbolTable(size_t initialSize);
-    void printSymbolTable();
 
     // Variables Functions
     bool handleVariableDeclaration(char* type, char* indentifier, struct nodeType *value, bool is_const);
