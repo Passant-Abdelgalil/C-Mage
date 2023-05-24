@@ -55,7 +55,6 @@ Flex and Bison
 
 ## Symbol Table
 
-(repeated variables for step by step)
 ![image](https://github.com/AhmadJamal01/Colon/assets/65499354/4f1672d7-6f0b-4b75-95f6-8d7ba44354fa)
 
 ## Intermediate Code Syntax
