@@ -52,6 +52,9 @@
         SymbolTableEntryType *array;
         size_t used;
         size_t size;
+        // handle scope by using a doubly linked list
+        struct SymbolTable *next;
+        struct SymbolTable *prev;
     } SymbolTable;
 
     struct SymbolTableIndex{
@@ -497,17 +500,18 @@ void initializationError(char* identifier) {
 
 bool handleFunctionDeclaration(char* type, char* identifier, char* parameters) {
     printf("inside function declaration: %s %s (%s)\n", type, identifier, parameters);
-    
-    int symbolIdx = getSymbolIdx(identifier);
-    if(symbolIdx != -1 ){
+    struct SymbolTableIndex idx = getSymbolIdx(identifier);
+    int symbolIdx = idx.index;
+    SymbolTable* currentSymbolTable = idx.symbolTable;
+    if(symbolIdx != -1 && currentSymbolTable == symbolTableHead) {
         errors = realloc(errors, sizeof(char*) * (errorCount+1));
-        int errorMsgLen = strlen("Line %d: Variable redeclaration, %s initially declared at %d") +
-                            snprintf(NULL, 0, "%d", symbolTable.array[symbolIdx].lineno) +
+        int errorMsgLen = strlen("Line %d: Function redeclaration, %s initially declared at %d") +
+                            snprintf(NULL, 0, "%d", currentSymbolTable->array[symbolIdx].lineno) +
                             strlen(identifier) +
                             snprintf(NULL, 0, "%d", yylineno) - 1;
         errors[errorCount] = malloc(sizeof(char) * errorMsgLen);
-        sprintf(errors[errorCount], "Line %d: Variable redeclaration, %s initially declared at %d", 
-                                    yylineno, identifier, symbolTable.array[symbolIdx].lineno);
+        sprintf(errors[errorCount], "Line %d: Function redeclaration, %s initially declared at %d",
+                                    yylineno, identifier, currentSymbolTable->array[symbolIdx].lineno);
         errorCount++;
         return false;
     }
@@ -665,10 +669,10 @@ struct nodeType* getNode(char* identifier) {
         return NULL;
     }
     else {
-        p->type = typeToEnum(currentSymbolTable.array[symbolIdx].datatype);
+        p->type = typeToEnum(currentSymbolTable->array[symbolIdx].datatype);
         p->value = strdup(identifier);
-        p->is_const = currentSymbolTable.array[symbolIdx].is_const;
-        p->initialized = currentSymbolTable.array[symbolIdx].initialized;
+        p->is_const = currentSymbolTable->array[symbolIdx].is_const;
+        p->initialized = currentSymbolTable->array[symbolIdx].initialized;
     }
 
     return p;
@@ -800,9 +804,14 @@ struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
 
 /* Initialize the dynamic symbol table */
 void initSymbolTable(size_t initialSize) {
-    symbolTable.used = 0;
-    symbolTable.size = initialSize;
-    symbolTable.array = malloc(initialSize * sizeof(SymbolTableEntryType));
+    printf("start: init symbol table\n");
+    symbolTableHead = malloc(sizeof(SymbolTable));
+    symbolTableHead->used = 0;
+    symbolTableHead->size = initialSize;
+    symbolTableHead->array = malloc(initialSize * sizeof(SymbolTableEntryType));
+    symbolTableHead->next = NULL;
+    symbolTableHead->prev = NULL;
+    printf("end: init symbol table\n");
 }
 
 void openScope(){
@@ -1118,16 +1127,16 @@ struct SymbolTableIndex getSymbolIdx(char* symbolName) {
 }
 
 void insertSymbol(SymbolTableEntryType symbol) {
-    /* check if the symbol table is full */
-    if(symbolTable.used == symbolTable.size) {
+/* check if the symbol table is full */
+    if(symbolTableHead->used == symbolTableHead->size) {
         /* printf("doubling symbol table size\n"); */
         /* double the symbol table array size */
-        symbolTable.size *= 2;
+        symbolTableHead->size *= 2;
         /* reallocate the array with the new size keeping the old data */
-        symbolTable.array = realloc(symbolTable.array, symbolTable.size * sizeof(SymbolTableEntryType));
+        symbolTableHead->array = realloc(symbolTableHead->array, symbolTableHead->size * sizeof(SymbolTableEntryType));
     }
     /* printf("will insert symbol %s\n", symbol.name); */
-    symbolTable.array[symbolTable.used++] = symbol;
+    symbolTableHead->array[symbolTableHead->used++] = symbol;
     /* printf("inserted\n"); */
 }
 

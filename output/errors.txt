@@ -1,6 +1,0 @@
-Line 2: Can not declare constant without intialization
-Line 3: Undeclared identifier, e
-Line 7: Undeclared identifier, s
-Line 10: Undeclared identifier, x
-Line 19: Undeclared identifier, x
-Line 22: Undeclared identifier, de
