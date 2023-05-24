@@ -87,5 +87,6 @@ Flex and Bison
 
 
 ## Code Playground
-![image](https://github.com/AhmadJamal01/Colon/assets/65499354/02f9b9f5-6608-4633-aaca-399b455b14cc)
+![image](https://github.com/AhmadJamal01/Colon/assets/65499354/8e3e8e43-fe3e-4808-8165-f1a26e4ec737)
+
 
