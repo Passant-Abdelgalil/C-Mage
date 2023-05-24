@@ -2,8 +2,7 @@ Ex2/
 Ex3/
 *.exe
 *.out
-*.yy.c
+*.yy.*
 *.output
-*.tab.c
-*.tab.h
+*.tab.*
 Project*/

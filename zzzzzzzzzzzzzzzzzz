@@ -1,0 +1,15 @@
+
+func(x, y, 213, "213", true)
+
+default values?!?!?!??
+
+push parameters?
+push parameters names for default values ??!!!?!?!?!?!?!!
+
+RETURN -> POP(label); goto label;
+
+RETURN EXPR -> POP(label); push(EXPR); goto label;
+
+
+enums??
+	

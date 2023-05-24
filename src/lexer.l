@@ -1,7 +1,7 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
-    #include "parser_new.tab.h"
+    #include "parser.tab.h"
     void yyerror(char *);
     int yylineno;
 %}
