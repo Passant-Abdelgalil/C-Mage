@@ -56,8 +56,7 @@ Flex and Bison
 ## Symbol Table
 
 (repeated variables for step by step)
-
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/5b7875dc-bd0f-400c-bdfc-ed5287c6533a/Untitled.png)
+![image](https://github.com/AhmadJamal01/Colon/assets/65499354/4f1672d7-6f0b-4b75-95f6-8d7ba44354fa)
 
 ## Intermediate Code Syntax
 
@@ -87,7 +86,7 @@ Flex and Bison
 | NEG s, r | r = - s |
 |  |  |
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/a25c11e3-7f6c-48fa-ba2d-8941d7d0df64/Untitled.png)
 
 ## Code Playground
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/8e0b98ca-ad84-4647-af1f-b3b53b555a91/Untitled.png)
+![image](https://github.com/AhmadJamal01/Colon/assets/65499354/02f9b9f5-6608-4633-aaca-399b455b14cc)
+
