@@ -1,0 +1,32 @@
+if (true) {;}
+
+if (false) {;}
+
+if (4<3) {;}
+
+if (5>2) {;}
+
+if (12==31) {;}
+
+if (12 != 23) {;}
+if (12 != 23) {
+  else {
+    if (true || false)
+  };}
+
+const int x = 123;
+if (x && 23) {;}
+
+if (x) {;}
+
+if (x > 12) {;}
+
+const float y = 213;
+if (y == 213) {;}
+
+while (y - 12) {;}
+
+do {;} while (12 != 23);
+
+for (const int i = 0; i < 10; 13) {;}
+

@@ -1,0 +1,9 @@
+int as = 123 * 32 / 123.412 % 131;
+
+
+int lg = 123 || 123 && true;
+
+
+int ng = -(123 + 12);
+
+int nt = ~(true || false)

@@ -763,7 +763,11 @@ struct nodeType* combineNode(struct nodeType* node1, struct nodeType* node2){
     else              printf("node1 value is: %s and type is: %d\n", node1->value, node1->type);
     if(node2 == NULL) printf("node2 is null\n");
     else              printf("node2 value is: %s and type is: %d\n", node2->value, node2->type);
-    
+ 
+    if (!node1 && !node2) return NULL;
+    if (!node1) return node2;
+    if (!node2) return node1;
+
     // check if both nodes have the same type
     // if not, output an error message
     if(node1->type != node2->type) {

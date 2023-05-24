@@ -7,7 +7,7 @@ int y = (x);
 enum test {x};
 enum test {x,y};
 enum test {x=10,y};
-enum test {x=10,y=10};
+enum test {x=10,y=12};
 
 float r = 4 +3 * 2 ;
 int x = x + y + ( x + y);

@@ -1,0 +1,47 @@
+# UnInitialized
+int x;
+int y = x+1213;
+
+# Undeclared
+int z = qweui + 123;
+
+
+# UnUsed
+int asdl123213213;
+
+
+# Const
+const int x = z;
+
+
+
+# Type mismatch
+string sadf = 123;
+string saasddf = 'asdas';
+char chr = "asdasd";
+char chzxcr = 123;
+
+string asdf = 123 + 'asdf';
+int asasddf = 123 + 'asdf';
+
+
+# Type conversion
+
+
+# Function call type mismatch
+
+
+
+# global scope
+
+
+
+
+# Enum delcaration
+
+enum test {x};
+enum teasdst {zsad,s};
+enum tes213t {wqe=10,aasdsd};
+enum tezxcst {sa=10,asdasf=12};
+
+# 
